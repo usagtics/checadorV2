@@ -1,0 +1,40 @@
+
+@import "tailwindcss";
+@keyframes floatAnim {
+    0% {
+      transform: translateY(0px) rotate(0deg);
+      opacity: 0.6;
+    }
+    50% {
+      transform: translateY(-30px) rotate(15deg);
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(0px) rotate(0deg);
+      opacity: 0.6;
+    }
+  }
+  
+  .floating-shape {
+    position: absolute;
+    background-color: rgba(255, 255, 255, 0.2);
+    animation: floatAnim 5s infinite ease-in-out alternate;
+    border-radius: 10%;
+  }
+  @keyframes typing {
+    from { width: 0; }
+    to { width: 100%; }
+  }
+  @keyframes blink {
+    50% { border-color: transparent; }
+  }
+  .animate-typing {
+    animation: typing 2s steps(20, end) infinite alternate, blink .7s infinite;
+  }
+
+  .floating-shape {
+    position: absolute;
+    background-color: rgba(255, 255, 255, 0.2);
+    animation: floatAnim 5s infinite ease-in-out alternate;
+    border-radius: 10%;
+  }
