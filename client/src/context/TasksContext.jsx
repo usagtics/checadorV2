@@ -3,7 +3,8 @@ import {
     createTasksRequest, 
     getTasksRequest, 
     deleteTasksRequest,
-    getTaskRequest
+    getTaskRequest,
+    updateTasksRequest
  } from "../api/tasks";
 
 const TaskContext = createContext();
@@ -44,12 +45,24 @@ export function TaskProvider({ children }) {
     }
   };
 
-  const getTask = async (id) => {
-    const res = await getTaskRequest(id);
-    console.log(res);
-
- }
+   const getTask = async (id) => {
+    try {
+      const res = await getTaskRequest(id);
+      return res.data; 
+    } catch (error) {
+      console.error("No se encontró la tarea o hubo un error.", error);
+    }
+  };
   
+  const updateTask = async (id, task) => {
+try {
+    await updateTasksRequest(id, task)
+} catch (error) {
+    console.error(error);
+    
+}
+  };
+
   return (
     <TaskContext.Provider value={{ 
         tasks, 
@@ -57,6 +70,7 @@ export function TaskProvider({ children }) {
         getTasks,
         deleteTask,
         getTask,
+        updateTask
          }}> 
       {children}
     </TaskContext.Provider>
