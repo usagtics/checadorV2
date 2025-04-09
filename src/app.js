@@ -3,6 +3,7 @@ import morgan from "morgan";
 import cookieParser from 'cookie-parser'
 import authRoutes from "./routes/auth.routes.js"
 import taskRoutes from './routes/tasks.routes.js'
+import employeesRoutes from './routes/empleados.routes.js'
 import cors from "cors";
 
 
@@ -18,6 +19,7 @@ app.use(cookieParser());
 
 app.use("/api", authRoutes);
 app.use("/api", taskRoutes);
+app.use("/api", employeesRoutes);
 
 
 export default app;

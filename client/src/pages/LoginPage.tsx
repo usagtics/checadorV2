@@ -17,19 +17,23 @@ function LoginPage() {
     handleSubmit,
     formState: { errors },
   } = useForm<FormData>();
-  const { signin, errors: signinErrors, isAuthenticated } = useAuth();
-  const navigate = useNavigate()
+  const { signin, errors: signinErrors, isAuthenticated, user } = useAuth();  // Desestructuración aquí
+  const navigate = useNavigate();
   
-
   const onSubmit = (data: FormData) => {
     signin(data);
   };
   
-
-useEffect (() =>{
-  if (isAuthenticated) navigate("/tasks")
-
-}, [isAuthenticated])
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      // Aquí puedes acceder al rol y redirigir según corresponda
+      if (user.role === "admin") {
+        navigate("/employees");  // Redirige a empleados si es admin
+      } else {
+        navigate("/tasks");  // Redirige a tareas si no es admin
+      }
+    }
+  }, [isAuthenticated, user, navigate]);
 
   return (
     <div className="relative flex h-screen items-center justify-center bg-gradient-to-br from-blue-300 via-blue-500 to-blue-700 overflow-hidden">
@@ -41,7 +45,7 @@ useEffect (() =>{
           style={{
             width: `${Math.floor(Math.random() * 170) + 60}px`,
             height: `${Math.floor(Math.random() * 120) + 60}px`,
-            top: `${[10, 30, 60, 85][i]}%`, // Posiciones más organizadas
+            top: `${[10, 30, 60, 85][i]}%`,
             left: `${[15, 75, 25, 80][i]}%`,
             transform: `rotate(${Math.random() * 45}deg)`,
             animationDuration: `${Math.random() * 6 + 4}s`,

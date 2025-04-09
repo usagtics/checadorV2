@@ -26,6 +26,9 @@ function Navbar() {
             <li>
               <Link to="/add-task">Add Task</Link>
             </li>
+            
+      
+
             <li>
                 <Link to='/'
                 onClick={() => {

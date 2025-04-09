@@ -37,6 +37,8 @@ export const AuthProvider = ({ children }) => {
     try {
       const res = await loginRequest(user);
       console.log(res);
+      // Almacena el objeto de usuario completo, incluyendo el rol
+      setUser(res.data);
       setisAuthenticated(true);
     } catch (error) {
       if (Array.isArray(error.response.data)) {
@@ -45,7 +47,7 @@ export const AuthProvider = ({ children }) => {
       setErrors([error.response.data.message]);
     }
   };
-
+  
   const logout = () => {
     Cookies.remove("token");
     setisAuthenticated(false);
