@@ -20,24 +20,31 @@ function LoginPage() {
   const { signin, errors: signinErrors, isAuthenticated, user } = useAuth();  // Desestructuración aquí
   const navigate = useNavigate();
   
-  const onSubmit = (data: FormData) => {
-    signin(data);
+  const onSubmit = async (data: FormData) => {
+    await signin(data);  
   };
   
   useEffect(() => {
+    console.log("isAuthenticated:", isAuthenticated);  
+    console.log("user:", user);  
+  
     if (isAuthenticated && user) {
-      // Aquí puedes acceder al rol y redirigir según corresponda
       if (user.role === "admin") {
-        navigate("/employees");  // Redirige a empleados si es admin
+        console.log("Redirigiendo a /employees");
+        navigate("/employees");
       } else {
-        navigate("/tasks");  // Redirige a tareas si no es admin
+        console.log("Redirigiendo a /tasks");
+        navigate("/tasks");
       }
     }
   }, [isAuthenticated, user, navigate]);
+  
+  
+  
 
   return (
     <div className="relative flex h-screen items-center justify-center bg-gradient-to-br from-blue-300 via-blue-500 to-blue-700 overflow-hidden">
-      {/* Figuras geométricas animadas */}
+
       {[...Array(4)].map((_, i) => (
         <div
           key={i}
@@ -94,29 +101,29 @@ function LoginPage() {
               helperText={errors.email?.message}
               InputLabelProps={{
                 style: {
-                  color: "#FFFFFF", // Color del label cuando el campo está vacío
+                  color: "#FFFFFF", 
                 },
               }}
               sx={{
                 "& .MuiOutlinedInput-root": {
                   "& fieldset": {
-                    borderColor: "white", // Borde blanco cuando no está enfocado
+                    borderColor: "white", 
                   },
                   "&:hover fieldset": {
-                    borderColor: "white", // Borde blanco cuando el campo se enfoca
+                    borderColor: "white", 
                   },
                   "&.Mui-focused fieldset": {
-                    borderColor: "blue", // Borde azul cuando está enfocado
+                    borderColor: "blue", 
                   },
                   "& input": {
-                    color: "white", // Cambia el color del texto a blanco dentro del campo
+                    color: "white", 
                   },
                 },
                 "& .MuiInputLabel-root.Mui-focused": {
-                  color: "blue", // Cambia el color del label a azul cuando está enfocado
+                  color: "blue", 
                 },
                 "& .MuiInputLabel-root.MuiFormLabel-filled": {
-                  color: "blue", // El color del label cuando el campo tiene valor
+                  color: "blue",
                 },
               }}
             />
@@ -139,29 +146,29 @@ function LoginPage() {
               helperText={errors.password?.message}
               InputLabelProps={{
                 style: {
-                  color: "#FFFFFF", // Color del label cuando el campo está vacío
+                  color: "#FFFFFF", 
                 },
               }}
               sx={{
                 "& .MuiOutlinedInput-root": {
                   "& fieldset": {
-                    borderColor: "white", // Borde blanco cuando no está enfocado
+                    borderColor: "white", 
                   },
                   "&:hover fieldset": {
-                    borderColor: "white", // Borde blanco cuando el campo se enfoca
+                    borderColor: "white", 
                   },
                   "&.Mui-focused fieldset": {
-                    borderColor: "blue", // Borde azul cuando está enfocado
+                    borderColor: "blue",
                   },
                   "& input": {
-                    color: "white", // Cambia el color del texto a blanco dentro del campo
+                    color: "white", 
                   },
                 },
                 "& .MuiInputLabel-root.Mui-focused": {
-                  color: "blue", // Cambia el color del label a azul cuando está enfocado
+                  color: "blue", 
                 },
                 "& .MuiInputLabel-root.MuiFormLabel-filled": {
-                  color: "blue", // El color del label cuando el campo tiene valor
+                  color: "blue", 
                 },
               }}
             />

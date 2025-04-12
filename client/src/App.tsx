@@ -8,11 +8,13 @@ import ProfilePage from './pages/ProfilePage';
 
 import EmployeePage from './pages/Admin/EmpleadoPage';
 import EmployeesFormPage from './pages/Admin/EmpleadosFormPage';
+import TipoHorarioPage from './pages/Admin/TipoHorarios'; 
 
 import ProtectedRoute from './ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
 import { TaskProvider } from './context/TasksContext';
 import { EmployeeProvider } from './context/EmpleadoContext';
+import { TipoHorarioProvider } from "./context/tipoHorarioContext"; 
 import Navbar from './components/Navbar';
 import NavbarAdmin from './components/NavbarAdmin';
 import { useAuth } from './context/AuthContext';
@@ -22,35 +24,39 @@ function App() {
     <AuthProvider>
       <TaskProvider>
         <EmployeeProvider>
-          <BrowserRouter>
-            <AuthContent />
-            <Routes>
-              {/* públicas */}
-              <Route path="/" element={<HomePage />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
+          <TipoHorarioProvider> 
+            <BrowserRouter>
+              <AuthContent />
+              <Routes>
+     
+                <Route path="/" element={<HomePage />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterPage />} />
 
-              {/* protegidas */}
-              <Route element={<ProtectedRoute />}>
-                <Route path="/tasks" element={<TaskPage />} />
-                <Route path="/add-task" element={<TasksFormPage />} />
-                <Route path="/tasks/:id" element={<TasksFormPage />} />
-                <Route path="/profile" element={<ProfilePage />} />
+                <Route element={<ProtectedRoute />}>
+                  <Route path="/tasks" element={<TaskPage />} />
+                  <Route path="/add-task" element={<TasksFormPage />} />
+                  <Route path="/tasks/:id" element={<TasksFormPage />} />
+                  <Route path="/profile" element={<ProfilePage />} />
 
-                {/* admin */}
-                <Route path="/employees" element={<EmployeePage />} />
-                <Route path="/add-employee" element={<EmployeesFormPage />} />
-                <Route path="/employees/:id" element={<EmployeesFormPage />} />
-              </Route>
-            </Routes>
-          </BrowserRouter>
+            
+                  <Route path="/employees" element={<EmployeePage />} />
+                  <Route path="/add-employee" element={<EmployeesFormPage />} />
+                  <Route path="/employees/:id" element={<EmployeesFormPage />} />
+
+              
+                  <Route path="/tipo-horario" element={<TipoHorarioPage />} /> {/* ✅ Nueva ruta */}
+                </Route>
+              </Routes>
+            </BrowserRouter>
+          </TipoHorarioProvider>
         </EmployeeProvider>
       </TaskProvider>
     </AuthProvider>
   );
 }
 
-// Componente que usa el hook useAuth
+
 function AuthContent() {
   const { user, isAuthenticated } = useAuth();
 

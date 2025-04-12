@@ -17,7 +17,7 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null); // Se corrigió la estructura de useState
+  const [user, setUser] = useState(null); 
   const [isAuthenticated, setisAuthenticated] = useState(false);
   const [errors, setErrors] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -36,9 +36,8 @@ export const AuthProvider = ({ children }) => {
   const signin = async (user) => {
     try {
       const res = await loginRequest(user);
-      console.log(res);
-      // Almacena el objeto de usuario completo, incluyendo el rol
-      setUser(res.data);
+      console.log(res.data);
+      setUser(res.data.user); // 👈 CORREGIDO
       setisAuthenticated(true);
     } catch (error) {
       if (Array.isArray(error.response.data)) {
@@ -47,6 +46,7 @@ export const AuthProvider = ({ children }) => {
       setErrors([error.response.data.message]);
     }
   };
+  
   
   const logout = () => {
     Cookies.remove("token");

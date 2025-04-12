@@ -31,10 +31,15 @@ export function EmployeeProvider({ children }) {
 
 
   const createEmployee = async (employee) => {
-        const res = await createEmployeeRequest(employee); 
-       console.log(res)
-  
+    try {
+      const res = await createEmployeeRequest(employee);
+      console.log("✅ Empleado creado:", res.data);
+      return res.data;
+    } catch (error) {
+      console.error("❌ Error al crear el empleado:", error.response?.data || error.message);
+      throw error;
     }
+  };
   const deleteEmployee = async (id) => {
     try {
       const res = await deleteEmployeeRequest(id);

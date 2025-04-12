@@ -16,13 +16,20 @@ const employeeSchema = new mongoose.Schema({
     default: 'employee',
   },
   photo: {
-    type: String, // URL de la foto cargada
+    type: String, 
   },
   dateJoined: {
     type: Date,
     default: Date.now,
   },
+  tipoHorario: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "TipoHorario",
+    required: true,
+  },
+  
 });
+
 
 const Employee = mongoose.model('Employee', employeeSchema);
 

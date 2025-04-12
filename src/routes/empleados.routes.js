@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { validateSchema } from "../middlewares/validator.middleware.js";
-import { authRequired } from "../middlewares/validatetoken.js"; // Verifica que esta sea la ruta correcta
+import { authRequired } from "../middlewares/validatetoken.js"; 
 import { createEmployeeSchema, updateEmployeeSchema } from "../schemas/empleados.schema.js"; 
 
 import {
@@ -9,14 +9,14 @@ import {
   createEmployee, 
   updateEmployee, 
   deleteEmployee
-} from "../controllers/empleados.controller.js"; // Controlador de empleados
+} from "../controllers/empleados.controller.js"; 
 
 const router = Router();
 
 router.post(
   '/employees', 
-  authRequired, // Verifica si el usuario está autenticado
-  validateSchema(createEmployeeSchema), // Validación de datos del empleado
+  authRequired, 
+  validateSchema(createEmployeeSchema),
   createEmployee
 );
 

@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 
-// Esquema para la creación de un empleado
+// Schema para crear un empleado
 export const createEmployeeSchema = z.object({
   name: z.string({
     required_error: "Name is required"
@@ -17,12 +17,17 @@ export const createEmployeeSchema = z.object({
   }),
 
   photo: z.string().url("Invalid URL for photo").optional().nullable(),
+
+  tipoHorario: z.string({
+    required_error: "Tipo de horario es requerido"
+  }).min(1, { message: "El tipo de horario no puede estar vacío" })
 });
 
-// Esquema para la actualización de un empleado
+// Schema para actualizar un empleado
 export const updateEmployeeSchema = z.object({
-  name: z.string().min(3, { message: "Name must be at least 3 characters long" }).optional(),
-  email: z.string().email("Invalid email address").optional(),
+  name: z.string().min(3).optional(),
+  email: z.string().email().optional(),
   role: z.enum(["admin", "employee"]).optional(),
-  photo: z.string().url("Invalid URL for photo").optional().nullable(),
+  photo: z.string().url().optional().nullable(),
+  tipoHorario: z.string().min(1).optional()
 });
