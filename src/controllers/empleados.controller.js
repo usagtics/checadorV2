@@ -1,5 +1,5 @@
 import Employee from '../models/empleados.model.js';
-import tipoHorarioModel from '../models/tipohorario.model.js';
+import tipohorarioModel from '../models/tipohorario.model.js';
 import Plantel from '../models/planteles.model.js';
 
 export const getEmployees = async (req, res) => {
