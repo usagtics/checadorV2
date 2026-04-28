@@ -21,12 +21,10 @@ export const getEmployees = async (req, res) => {
   }
 };
 
-// 📌 Crear empleado
 export const createEmployee = async (req, res) => {
   try {
     const { name, email, role, tipoHorario, plantel } = req.body;
 
-    // 🔸 Validar tipo de horario
     if (tipoHorario) {
       const horarioExists = await tipoHorarioModel.findById(tipoHorario);
       if (!horarioExists) {
@@ -34,7 +32,6 @@ export const createEmployee = async (req, res) => {
       }
     }
 
-    // 🔸 Validar plantel
     if (plantel) {
       const plantelExists = await Plantel.findById(plantel);
       if (!plantelExists) {
@@ -47,14 +44,14 @@ export const createEmployee = async (req, res) => {
       email,
       role,
       tipoHorario,
-      plantel, // 🔹 guardar el plantel
+      plantel, 
     });
 
     const savedEmployee = await newEmployee.save();
 
     const populatedEmployee = await Employee.findById(savedEmployee._id)
       .populate('tipoHorario', 'descripcion')
-      .populate('plantel', 'nombre'); // 🔹 incluir el plantel en la respuesta
+      .populate('plantel', 'nombre');
 
     res.json(populatedEmployee);
   } catch (error) {
@@ -63,7 +60,6 @@ export const createEmployee = async (req, res) => {
   }
 };
 
-// 📌 Obtener un empleado por ID
 export const getEmployee = async (req, res) => {
   try {
     const employee = await Employee.findById(req.params.id)
@@ -77,7 +73,6 @@ export const getEmployee = async (req, res) => {
   }
 };
 
-// 📌 Eliminar empleado
 export const deleteEmployee = async (req, res) => {
   try {
     const employee = await Employee.findByIdAndDelete(req.params.id);
@@ -89,12 +84,10 @@ export const deleteEmployee = async (req, res) => {
   }
 };
 
-// 📌 Actualizar empleado
 export const updateEmployee = async (req, res) => {
   try {
     const { tipoHorario, plantel } = req.body;
 
-    // 🔸 Validar tipo de horario
     if (tipoHorario) {
       const horarioExists = await tipoHorarioModel.findById(tipoHorario);
       if (!horarioExists) {
@@ -102,7 +95,6 @@ export const updateEmployee = async (req, res) => {
       }
     }
 
-    // 🔸 Validar plantel
     if (plantel) {
       const plantelExists = await Plantel.findById(plantel);
       if (!plantelExists) {
