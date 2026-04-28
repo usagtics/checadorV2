@@ -1,0 +1,105 @@
+
+@import "tailwindcss";
+@keyframes floatAnim {
+    0% {
+      transform: translateY(0px) rotate(0deg);
+      opacity: 0.6;
+    }
+    50% {
+      transform: translateY(-30px) rotate(15deg);
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(0px) rotate(0deg);
+      opacity: 0.6;
+    }
+  }
+  
+  .floating-shape {
+    position: absolute;
+    background-color: rgba(255, 255, 255, 0.2);
+    animation: floatAnim 5s infinite ease-in-out alternate;
+    border-radius: 10%;
+  }
+  @keyframes typing {
+    from { width: 0; }
+    to { width: 100%; }
+  }
+  @keyframes blink {
+    50% { border-color: transparent; }
+  }
+  .animate-typing {
+    animation: typing 2s steps(20, end) infinite alternate, blink .7s infinite;
+  }
+
+  .floating-shape {
+    position: absolute;
+    background-color: rgba(255, 255, 255, 0.2);
+    animation: floatAnim 5s infinite ease-in-out alternate;
+    border-radius: 10%;
+  }
+  @keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 20s linear infinite;
+}
+
+
+@layer utilities {
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+  .animate-float-slow {
+    animation: float 10s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-20px);
+    }
+  }
+}
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  25% {
+    transform: translateY(-6px);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+  75% {
+    transform: translateY(-6px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+@keyframes clock-hand {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-clock-hand {
+  animation: clock-hand 60s linear infinite;
+}
+
