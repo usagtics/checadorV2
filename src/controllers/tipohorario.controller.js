@@ -1,4 +1,4 @@
-import TipoHorario from '../models/tipoHorario.model.js';
+import TipoHorario from '../models/tipohorario.model.js';
 import { createTipoHorarioSchema, updateTipoHorarioSchema } from '../schemas/tipohorario.schema.js';
 
 export const getTipoHorarios = async (req, res) => {
