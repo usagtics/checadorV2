@@ -1,13 +1,12 @@
 import Employee from '../models/empleados.model.js';
-import tipoHorarioModel from '../models/tipoHorario.model.js';
+import tipoHorarioModel from '../models/tipohorario.model.js';
 import Plantel from '../models/planteles.model.js';
 
-// 📌 Obtener todos los empleados
 export const getEmployees = async (req, res) => {
   try {
     const employees = await Employee.find()
       .populate('tipoHorario', 'descripcion')
-      .populate('plantel', 'nombre') // 🔹 mostrar nombre del plantel
+      .populate('plantel', 'nombre') 
       .exec();
 
     employees.forEach(employee => {
