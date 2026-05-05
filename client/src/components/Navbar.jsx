@@ -15,7 +15,8 @@ function Navbar() {
     return name ? name.charAt(0).toUpperCase() : "U";
   };
 
-    {/* CAMBIO: Se quitó el degradado y se puso un azul sólido e institucional (blue-600) */}
+  
+  return (
     <nav className="bg-blue-600 shadow-md text-white font-sans sticky top-0 z-50">
       
       <div className="w-full px-4 md:px-8"> 
@@ -23,7 +24,7 @@ function Navbar() {
           
           {/* --- LOGO Y TÍTULO --- */}
           <Link to="/" className="flex items-center gap-4 group hover:opacity-95 transition duration-300">
-            {/* Contenedor blanco del logo (tal como en tu imagen) */}
+            {/* Contenedor blanco del logo */}
             <div className="bg-white p-2 rounded-xl shadow-sm transform group-hover:scale-105 transition duration-300 flex items-center justify-center">
               <img
                 src={usaggLogo}
@@ -47,7 +48,7 @@ function Navbar() {
             <div className="ml-10 flex items-center space-x-6">
               {isAuthenticated ? (
                 <>
-                  {/* Tarjeta de Usuario - Ajustada para fondo azul sólido */}
+                  {/* Tarjeta de Usuario */}
                   <div className="flex items-center gap-3 bg-blue-700/50 border border-blue-500/50 py-2 px-5 rounded-full backdrop-blur-sm shadow-inner transition hover:bg-blue-700/70">
                     <div className="relative">
                       {/* Círculo de avatar */}
@@ -135,6 +136,8 @@ function Navbar() {
         </div>
       )}
     </nav>
+  ); 
+
 
 }
 

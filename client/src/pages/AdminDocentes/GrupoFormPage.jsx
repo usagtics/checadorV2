@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-// 👇 CAMBIO 1: Importamos el contexto de Grupos, no el Académico
+// 👇 Importamos el contexto de Grupos
 import { useGrupos } from '../../context/GrupoContext'; 
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+// ✅ IMPORTAMOS EL MENÚ LATERAL
+import MenuDocentes from '../../menu/MenuDocentes';
 
 export default function GrupoFormPage() {
-  // 👇 CAMBIO 2: Usamos useGrupos() para obtener la función
   const { createGrupo, errors: backendErrors } = useGrupos();
   const navigate = useNavigate();
 
@@ -15,95 +16,142 @@ export default function GrupoFormPage() {
     activo: true
   });
 
+  const [loading, setLoading] = useState(false);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
     try {
       await createGrupo(grupo);
       navigate('/admin/grupos'); 
     } catch (error) {
-      // Esto nos ayudará a ver si el servidor rechaza los datos por otra cosa
       console.error("DETALLES DEL ERROR:", error.response?.data || error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
-      <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-[2.5rem] shadow-2xl w-full max-w-md">
-        <header className="mb-8 text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-emerald-500/10 text-emerald-500 rounded-2xl mb-4">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-black text-white">Registrar Nuevo Grupo</h1>
-          <p className="text-zinc-500 text-sm">Configura el nivel y turno del grupo.</p>
-        </header>
+    <div className="flex h-screen bg-gray-50 font-sans selection:bg-blue-900/10 overflow-hidden">
+        
+        {/* --- MENÚ LATERAL --- */}
+        <MenuDocentes />
 
-        {/* Muestra errores si el nombre del grupo ya existe, por ejemplo */}
-        {backendErrors && backendErrors.map((error, i) => (
-          <div key={i} className="bg-red-500/10 border border-red-500/20 text-red-500 p-3 rounded-xl mb-4 text-xs font-bold text-center">
-            {error}
-          </div>
-        ))}
+        {/* --- CONTENIDO PRINCIPAL --- */}
+        <div className="flex-1 overflow-y-auto p-6 md:p-12">
+            <div className="max-w-4xl mx-auto space-y-10">
+                
+                {/* --- ENCABEZADO CON BOTÓN DE REGRESO --- */}
+                <header className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <Link 
+                            to="/admin/grupos" 
+                            className="w-10 h-10 bg-white border border-gray-200 rounded-xl flex items-center justify-center text-gray-400 hover:text-blue-900 hover:border-blue-900 transition-all shadow-sm"
+                            title="Volver al listado"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                            </svg>
+                        </Link>
+                        <div>
+                            <div className="flex items-center gap-3 mb-1">
+                                <div className="h-8 w-1.5 bg-blue-900 rounded-full"></div>
+                                <h1 className="text-3xl font-black text-gray-900 tracking-tighter">
+                                    Nuevo <span className="text-blue-900">Grupo</span>
+                                </h1>
+                            </div>
+                            <p className="text-gray-500 font-medium text-sm ml-4">
+                                Registre la información del grupo para el ciclo actual.
+                            </p>
+                        </div>
+                    </div>
+                </header>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-xs font-black text-zinc-500 uppercase tracking-widest mb-2 px-1">Nombre del Grupo</label>
-            <input 
-              type="text" 
-              placeholder="Ej: 101-B"
-              className="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-5 py-4 text-white outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
-              onChange={(e) => setGrupo({ ...grupo, nombre: e.target.value })}
-              required
-            />
-          </div>
+                {/* --- FORMULARIO PRINCIPAL --- */}
+                <div className="bg-white rounded-[2.5rem] p-8 md:p-12 shadow-xl shadow-gray-200/60 border border-gray-100">
+                    
+                    {/* Alertas de Error del Backend */}
+                    {backendErrors && backendErrors.length > 0 && (
+                        <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-2xl text-red-700 text-sm font-bold">
+                            {backendErrors.map((error, i) => (
+                                <p key={i} className="flex items-center gap-2">⚠️ {error}</p>
+                            ))}
+                        </div>
+                    )}
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-black text-zinc-500 uppercase tracking-widest mb-2 px-1">Programa</label>
-              <select 
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-4 text-white outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
-                value={grupo.programa}
-                onChange={(e) => setGrupo({ ...grupo, programa: e.target.value })}
-              >
-               <option value="Licenciatura">Licenciatura</option>
-               <option value="TSU">TSU</option>
-               <option value="Nivelación">Nivelación</option>
-              </select>
+                    <form onSubmit={handleSubmit} className="space-y-10">
+                        
+                        <section>
+                            <div className="flex items-center gap-2 mb-6">
+                                <span className="w-6 h-6 bg-blue-900 text-white rounded-lg flex items-center justify-center text-[10px] font-black">01</span>
+                                <h2 className="text-blue-900 font-black uppercase tracking-widest text-xs">Información del Grupo</h2>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                {/* NOMBRE */}
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Nombre del Grupo</label>
+                                    <input 
+                                        type="text" 
+                                        placeholder="Ej: 101-B"
+                                        value={grupo.nombre}
+                                        onChange={(e) => setGrupo({ ...grupo, nombre: e.target.value })}
+                                        required 
+                                        className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-5 py-4 text-gray-900 focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-900 outline-none transition-all font-bold" 
+                                    />
+                                </div>
+                                
+                                {/* PROGRAMA */}
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Programa</label>
+                                    <select 
+                                        value={grupo.programa}
+                                        onChange={(e) => setGrupo({ ...grupo, programa: e.target.value })}
+                                        className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-5 py-4 text-gray-900 focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-900 outline-none transition-all font-bold appearance-none cursor-pointer"
+                                    >
+                                        <option value="Licenciatura">Licenciatura</option>
+                                        <option value="TSU">TSU</option>
+                                        <option value="Nivelación">Nivelación</option>
+                                    </select>
+                                </div>
+
+                                {/* TURNO */}
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Turno</label>
+                                    <select 
+                                        value={grupo.turno}
+                                        onChange={(e) => setGrupo({ ...grupo, turno: e.target.value })}
+                                        className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-5 py-4 text-gray-900 focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-900 outline-none transition-all font-bold appearance-none cursor-pointer"
+                                    >
+                                        <option value="Matutino">Matutino</option>
+                                        <option value="Vespertino">Vespertino</option>
+                                        <option value="Sabatino">Sabatino</option>
+                                        <option value="Virtual">Virtual</option>
+                                        <option value="Nocturno">Nocturno</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </section>
+
+                        <div className="pt-8 flex justify-end">
+                            <button 
+                                type="submit" 
+                                disabled={loading} 
+                                className={`min-w-[280px] bg-blue-900 hover:bg-blue-950 text-white font-black py-5 px-8 rounded-2xl shadow-xl shadow-blue-900/20 flex justify-center items-center transition-all transform active:scale-95 ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                            >
+                                {loading ? (
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                        GUARDANDO...
+                                    </div>
+                                ) : 'REGISTRAR GRUPO'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
             </div>
-
-            <div>
-              <label className="block text-xs font-black text-zinc-500 uppercase tracking-widest mb-2 px-1">Turno</label>
-              <select 
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-4 text-white outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
-                value={grupo.turno}
-                onChange={(e) => setGrupo({ ...grupo, turno: e.target.value })}
-              >
-                <option value="Matutino">Matutino</option>
-                <option value="Vespertino">Vespertino</option>
-                <option value="Sabatino">Sabatino</option>
-                <option value="Virtual">Virtual</option>
-                <option value="Nocturno">Nocturno</option>
-              </select>
-            </div>
-          </div>
-
-          <button 
-            type="submit"
-            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-5 rounded-2xl shadow-xl shadow-emerald-500/20 transition-all transform active:scale-95"
-          >
-            Guardar Grupo
-          </button>
-
-          <button 
-            type="button"
-            onClick={() => navigate(-1)}
-            className="w-full text-zinc-600 text-[10px] font-black uppercase tracking-[0.2em] hover:text-white transition-colors"
-          >
-            Volver al listado
-          </button>
-        </form>
-      </div>
+        </div>
     </div>
   );
 }

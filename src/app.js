@@ -12,7 +12,6 @@ import multer from "multer";
 import authRoutes from "./routes/auth.routes.js"; // Colaboradores/General
 import directivoAuthRoutes from "./routes/directivoAuth.routes.js"; // NUEVO: Gestión Académica
 
-
 // OTRAS RUTAS
 import taskRoutes from './routes/tasks.routes.js';
 import employeesRoutes from './routes/empleados.routes.js';
@@ -44,20 +43,27 @@ const upload = multer({ storage });
 
 const app = express();
 
+// --- CONFIGURACIÓN DE CORS ADAPTADA PARA HOSTINGER ---
 app.use(cors({
   origin: [
-    "http://localhost:5173",             
-    "https://checadorusag.com.mx"       
+    "http://localhost:5173",
+    "http://192.168.100.78:5173", 
+    "https://checadorusag.com.mx",
+    "https://www.checadorusag.com.mx",
+    "https://asiste-usag.com.mx",
+    "https://www.asiste-usag.com.mx"
   ],
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
+// -----------------------------------------------------
 
 app.use(morgan("dev"));
 app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());
 
 app.use("/uploads", express.static(uploadsPath));
-
 
 app.use("/api", authRoutes);        
 app.use("/api", directivoAuthRoutes); 

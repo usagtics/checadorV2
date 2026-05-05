@@ -1,10 +1,12 @@
 import React, { createContext, useContext, useState } from "react";
 import {
   getMateriasRequest,
-  createMateriaRequest, // <-- IMPORTANTE: Debe estar importada
+  createMateriaRequest, 
   getGruposRequest,
   getOfertasRequest,
-  createOfertaAcademicaRequest
+  createOfertaAcademicaRequest,
+  updateOfertaAcademicaRequest, // ✅ NUEVO IMPORT
+  deleteOfertaAcademicaRequest  // ✅ NUEVO IMPORT
 } from "../api/academico";
 
 export const AcademicoContext = createContext();
@@ -33,11 +35,9 @@ export function AcademicoProvider({ children }) {
     }
   };
 
-  // 👇 ESTA ES LA FUNCIÓN QUE TE ESTÁ PIDIENDO EL FORMULARIO 👇
   const createMateria = async (materia) => {
     try {
       const res = await createMateriaRequest(materia);
-      // Opcional: actualizamos el estado local para que la tabla se refresque sola
       setMaterias([...materias, res.data]);
       return res.data;
     } catch (error) {
@@ -46,7 +46,7 @@ export function AcademicoProvider({ children }) {
     }
   };
 
-  // --- OTROS ---
+  // --- GRUPOS ---
   const getGrupos = async () => {
     try {
       const res = await getGruposRequest();
@@ -56,6 +56,7 @@ export function AcademicoProvider({ children }) {
     }
   };
 
+  // --- OFERTAS ACADÉMICAS (ASIGNACIONES) ---
   const getOfertas = async (programa) => {
     try {
       const res = await getOfertasRequest(programa);
@@ -74,6 +75,30 @@ export function AcademicoProvider({ children }) {
     }
   };
 
+  // ✅ NUEVO: Función para actualizar
+  const updateOfertaAcademica = async (id, asignacionData) => {
+    try {
+      const res = await updateOfertaAcademicaRequest(id, asignacionData);
+      return res.data;
+    } catch (error) {
+      console.error("Error al actualizar oferta:", error);
+      setErrors(error.response?.data?.message || ["Error al actualizar la asignación"]);
+      throw error;
+    }
+  };
+
+  // ✅ NUEVO: Función para eliminar
+  const deleteOfertaAcademica = async (id) => {
+    try {
+      const res = await deleteOfertaAcademicaRequest(id);
+      return res.data;
+    } catch (error) {
+      console.error("Error al eliminar oferta:", error);
+      setErrors(error.response?.data?.message || ["Error al eliminar la asignación"]);
+      throw error;
+    }
+  };
+
   return (
     <AcademicoContext.Provider
       value={{
@@ -82,9 +107,11 @@ export function AcademicoProvider({ children }) {
         ofertas,
         getOfertas,
         getMaterias,
-        createMateria, // <--- REVISA QUE ESTO ESTÉ AQUÍ (Es la salida)
+        createMateria, 
         getGrupos,
         createOfertaAcademica,
+        updateOfertaAcademica, 
+        deleteOfertaAcademica, 
         errors,
       }}
     >

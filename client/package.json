@@ -26,6 +26,7 @@
     "js-cookie": "^3.0.5",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.7",
+    "jszip": "^3.10.1",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.507.0",
     "react": "^19.0.0",

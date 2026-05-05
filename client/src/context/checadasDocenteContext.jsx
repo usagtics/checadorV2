@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState } from "react";
-import { getChecadasRequest } from "../api/asistencias";
+import { getChecadasRequest, justificarAsistenciaRequest } from "../api/asistencias";
+
 const ChecadasDocenteContext = createContext();
 
-// 2. Hook personalizado
 export const useChecadasDocente = () => {
   const context = useContext(ChecadasDocenteContext);
   if (!context) {
@@ -11,13 +11,11 @@ export const useChecadasDocente = () => {
   return context;
 };
 
-// 3. El Provider
 export function ChecadasDocenteProvider({ children }) {
   const [checadas, setChecadas] = useState([]);
   const [cargando, setCargando] = useState(false);
   const [errores, setErrores] = useState([]);
 
-  // Función para pedir el reporte
   const getChecadas = async () => {
     try {
       setCargando(true);
@@ -31,11 +29,31 @@ export function ChecadasDocenteProvider({ children }) {
     }
   };
 
+const justificarAsistencia = async (id, motivo) => { // ✅ AHORA RECIBE EL MOTIVO
+    try {
+        const res = await justificarAsistenciaRequest(id, motivo);
+        
+        // Actualizamos la lista plana agregando el motivo en vivo
+        setChecadas(prevChecadas => 
+            prevChecadas.map(checada => 
+                checada._id === id ? { ...checada, estatus: 'Justificado', motivoJustificacion: motivo } : checada
+            )
+        );
+        
+        return res.data;
+    } catch (err) {
+        console.error("Error al justificar:", err);
+        setError("Error al justificar la asistencia");
+        throw err; 
+    }
+  };
+
   return (
     <ChecadasDocenteContext.Provider
       value={{
         checadas,
         getChecadas,
+        justificarAsistencia, 
         cargando,
         errores
       }}

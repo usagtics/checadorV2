@@ -59,10 +59,7 @@ export default function DashboardDirectivoPage() {
               </div>
             </div>
             
-            <div className="bg-white/10 backdrop-blur-sm border border-white/10 px-5 py-2.5 rounded-2xl text-center shadow-inner relative z-10">
-              <p className="text-[9px] text-blue-300 font-black uppercase tracking-[0.2em]">Sesión Activa</p>
-              <p className="text-white font-bold text-sm">{user?.username || 'Administrador'}</p>
-            </div>
+        
           </header>
 
           <div className="flex items-center gap-3 mb-6">

@@ -1,16 +1,25 @@
 import React, { useState } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
+
 import { getNominaRequest } from '../../api/asistencias';
 import { useDirectivo } from '../../context/DirectivoContext'; 
 import logoEmpresa from '../../assets/logo.png';
-
 import MenuDocentes from '../../menu/MenuDocentes';
 
 const NominaPage = () => {
-  const [cargando, setCargando] = useState(false);
-  
+  const [cargandoGeneral, setCargandoGeneral] = useState(false);
+  const [cargandoZip, setCargandoZip] = useState(false);
   const { user } = useDirectivo(); 
+
+  const formatearFechaLocal = (fecha) => {
+    const y = fecha.getFullYear();
+    const m = String(fecha.getMonth() + 1).padStart(2, '0');
+    const d = String(fecha.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
 
   const obtenerPeriodoActual = () => {
     const hoy = new Date();
@@ -22,42 +31,18 @@ const NominaPage = () => {
     const fin = new Date(inicio);
     fin.setDate(inicio.getDate() + 6);
     
-    return { inicio, fin };
+    return { 
+        inicioStr: formatearFechaLocal(inicio), 
+        finStr: formatearFechaLocal(fin) 
+    };
   };
 
-  const { inicio, fin } = obtenerPeriodoActual();
-
-  const formatearFechaLocal = (fecha) => {
-    const y = fecha.getFullYear();
-    const m = String(fecha.getMonth() + 1).padStart(2, '0');
-    const d = String(fecha.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-  };
-
-  const generarNomina = async () => {
-    const strInicio = formatearFechaLocal(inicio);
-    const strFin = formatearFechaLocal(fin);
-    
-    try {
-      setCargando(true);
-      const res = await getNominaRequest(strInicio, strFin);
-      
-      if(res.data.length === 0) {
-        alert("No se encontraron registros completos (Entrada y Salida) en este periodo.");
-        return;
-      }
-      
-      descargarPDF(res.data, strInicio, strFin);
-    } catch (error) {
-      console.error(error);
-      alert("Hubo un error al generar la nómina.");
-    } finally {
-      setCargando(false);
-    }
-  };
+  const periodoPorDefecto = obtenerPeriodoActual();
+  const [fechaInicio, setFechaInicio] = useState(periodoPorDefecto.inicioStr);
+  const [fechaFin, setFechaFin] = useState(periodoPorDefecto.finStr);
 
   const formatoTiempo = (horasDecimales) => {
-    if (!horasDecimales || horasDecimales <= 0) return "";
+    if (!horasDecimales || horasDecimales <= 0) return "0 hr";
     const hrs = Math.floor(horasDecimales);
     const mins = Math.round((horasDecimales - hrs) * 60);
     
@@ -66,7 +51,34 @@ const NominaPage = () => {
     return `${hrs} hr ${mins} min`;
   };
 
-  const descargarPDF = (datos, strInicio, strFin) => {
+  const generarNomina = async (tipoRecibo) => {
+    try {
+      if (tipoRecibo === 'general') setCargandoGeneral(true);
+      if (tipoRecibo === 'individual') setCargandoZip(true);
+
+      const res = await getNominaRequest(fechaInicio, fechaFin);
+      
+      if(res.data.length === 0) {
+        alert("No se encontraron registros completos en este periodo.");
+        return;
+      }
+      
+      if (tipoRecibo === 'general') {
+          descargarPDFGeneral(res.data, fechaInicio, fechaFin);
+      } else {
+          await descargarPDFIndividuales(res.data, fechaInicio, fechaFin);
+      }
+      
+    } catch (error) {
+      console.error(error);
+      alert("Hubo un error al generar la nómina.");
+    } finally {
+      setCargandoGeneral(false);
+      setCargandoZip(false);
+    }
+  };
+
+  const descargarPDFGeneral = (datos, strInicio, strFin) => {
     const doc = new jsPDF('landscape');
     const formatoFechaPDF = (fechaStr) => fechaStr.split('-').reverse().join('/');
     
@@ -74,15 +86,13 @@ const NominaPage = () => {
 
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
-    
     doc.text("UNIVERSIDAD SAN ANDRÉS DE GUANAJUATO", 65, 14);
     
     doc.setFontSize(10);
-    doc.text("NÓMINA SEMANAL", 65, 19);
-    doc.text("RADIOLOGÍA E IMAGEN", 65, 24);
+    doc.text("REPORTE GENERAL DE NÓMINA (LISTA MAESTRA)", 65, 19);
     
     doc.setFont("helvetica", "normal");
-    doc.text(`FECHA:      ${formatoFechaPDF(strInicio)}      AL      ${formatoFechaPDF(strFin)}`, 65, 32);
+    doc.text(`PERÍODO:      ${formatoFechaPDF(strInicio)}      AL      ${formatoFechaPDF(strFin)}`, 65, 28);
 
     let totalGeneral = 0;
     let totalSab = 0, totalMat = 0, totalLin = 0;
@@ -99,7 +109,7 @@ const NominaPage = () => {
         formatoTiempo(d.horasSabatinas),
         formatoTiempo(d.horasMatutinas),
         formatoTiempo(d.horasLinea),
-        `$${d.total.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`,
+        `$${d.total.toLocaleString('es-MX', {minimumFractionDigits: 2})}`,
         d.metodoPago,
         "" 
       ];
@@ -110,12 +120,12 @@ const NominaPage = () => {
         formatoTiempo(totalSab), 
         formatoTiempo(totalMat), 
         formatoTiempo(totalLin), 
-        `$${totalGeneral.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`, "", ""
+        `$${totalGeneral.toLocaleString('es-MX', {minimumFractionDigits: 2})}`, "", ""
     ]);
 
     autoTable(doc, {
-      startY: 40,
-      head: [["NO.", "DOCENTE", "SABATINOS", "MATUTINOS", "LÍNEA", "NÓMINA", "MÉTODO DE PAGO", "INCIDENCIAS"]],
+      startY: 35,
+      head: [["NO.", "DOCENTE", "SABATINOS", "MATUTINOS", "LÍNEA", "TOTAL", "PAGO", "INCIDENCIAS"]],
       body: tableRows,
       theme: 'grid',
       headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold', halign: 'center', fontSize: 8 },
@@ -138,26 +148,103 @@ const NominaPage = () => {
     });
 
     const finalY = (doc.lastAutoTable ? doc.lastAutoTable.finalY : 100) + 30;
-    doc.setFontSize(8);
-    
     const nombreRevisor = user 
         ? `${user.nombre || ''} ${user.apellidos || ''}`.trim().toUpperCase() || user.username?.toUpperCase() 
         : "ADMINISTRACIÓN";
     
-    doc.text("REVISÓ:", 14, finalY);
+    doc.setFontSize(8);
+    doc.text("AUTORIZÓ:", 14, finalY);
     doc.line(35, finalY + 1, 100, finalY + 1);
     doc.text(nombreRevisor, 45, finalY - 3); 
-    
     doc.text("FIRMA:", 14, finalY + 15);
     doc.line(35, finalY + 16, 100, finalY + 16);
     
-    doc.line(160, finalY + 1, 260, finalY + 1);
-    doc.text("NOMBRE QUIEN RECIBE", 190, finalY + 5);
-    
-    doc.line(160, finalY + 16, 260, finalY + 16);
-    doc.text("FIRMA", 205, finalY + 20);
+    doc.save(`Reporte_General_Nomina_${formatoFechaPDF(strInicio).replace(/\//g, '-')}.pdf`);
+  };
 
-    doc.save(`Nomina_Semanal_${formatoFechaPDF(strInicio).replace(/\//g, '-')}.pdf`);
+  const descargarPDFIndividuales = async (datos, strInicio, strFin) => {
+    const zip = new JSZip(); 
+    const formatoFechaPDF = (fechaStr) => fechaStr.split('-').reverse().join('/');
+    const fechaImpresion = new Date().toLocaleDateString('es-MX');
+
+    datos.forEach((docente) => {
+        const doc = new jsPDF('portrait'); 
+
+        doc.addImage(logoEmpresa, 'PNG', 20, 15, 45, 28);
+
+        doc.setFontSize(14);
+        doc.setFont("helvetica", "bold");
+        doc.text("RECIBO DE PAGO DOCENTE", 75, 25);
+        
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        doc.text("Universidad San Andrés de Guanajuato", 75, 32);
+        
+        doc.setFontSize(9);
+        doc.text(`Periodo: ${formatoFechaPDF(strInicio)} al ${formatoFechaPDF(strFin)}`, 75, 38);
+        doc.text(`Emisión: ${fechaImpresion}`, 75, 43);
+
+        doc.setDrawColor(200, 200, 200);
+        doc.setFillColor(245, 245, 245);
+        doc.rect(20, 55, 170, 8, 'F');
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "bold");
+        doc.text("DATOS DEL MAESTRO", 22, 60);
+
+        doc.setFont("helvetica", "normal");
+        doc.text(`Nombre:`, 22, 72);
+        doc.setFont("helvetica", "bold");
+        doc.text(`${docente.nombre.toUpperCase()}`, 60, 72);
+        
+        doc.setFont("helvetica", "normal");
+        doc.text(`Pago vía:`, 22, 80);
+        doc.setFont("helvetica", "bold");
+        doc.text(`${docente.metodoPago}`, 60, 80);
+
+        doc.setFillColor(245, 245, 245);
+        doc.rect(20, 95, 170, 8, 'F');
+        doc.setFont("helvetica", "bold");
+        doc.text("DETALLE DE HORAS TRABAJADAS", 22, 100);
+
+        doc.setFont("helvetica", "normal");
+        doc.text("Horas Matutinas:", 25, 115);
+        doc.text(formatoTiempo(docente.horasMatutinas), 80, 115);
+        doc.text("Horas Sabatinas:", 25, 125);
+        doc.text(formatoTiempo(docente.horasSabatinas), 80, 125);
+        doc.text("Horas en Línea:", 25, 135);
+        doc.text(formatoTiempo(docente.horasLinea), 80, 135);
+
+        doc.line(20, 145, 190, 145);
+
+        doc.setFontSize(14);
+        doc.setFont("helvetica", "bold");
+        doc.text("TOTAL A PAGAR:", 80, 158);
+        
+        doc.setFontSize(16);
+        doc.setTextColor(16, 185, 129); 
+        doc.text(`$${docente.total.toLocaleString('es-MX', {minimumFractionDigits: 2})} MXN`, 140, 158);
+        doc.setTextColor(0, 0, 0); 
+
+        doc.setFontSize(9);
+        doc.text("Recibí de conformidad la cantidad descrita arriba por concepto de mis servicios docentes.", 20, 200);
+
+        doc.line(60, 235, 150, 235);
+        doc.setFont("helvetica", "bold");
+        doc.text("FIRMA DEL MAESTRO(A)", 85, 242);
+        
+        doc.setLineDashPattern([2, 2], 0);
+        doc.line(10, 275, 200, 275);
+        doc.setFontSize(8);
+        doc.setTextColor(150, 150, 150);
+        doc.text("✂ Corte aquí para archivo de la escuela", 105, 273, { align: 'center' });
+
+        const pdfBlob = doc.output('blob');
+        const nombreArchivo = `Recibo_${docente.nombre.replace(/\s+/g, '_')}.pdf`;
+        zip.file(nombreArchivo, pdfBlob);
+    });
+
+    const contenidoZip = await zip.generateAsync({ type: 'blob' });
+    saveAs(contenidoZip, `Recibos_Maestros_${formatoFechaPDF(strInicio).replace(/\//g, '-')}.zip`);
   };
 
   return (
@@ -165,49 +252,102 @@ const NominaPage = () => {
         
       <MenuDocentes />
 
-      <div className="flex-1 overflow-y-auto p-6 md:p-10 flex flex-col items-center justify-center">
+      <div className="flex-1 overflow-y-auto p-6 md:p-10">
         
-        <div className="w-full max-w-7xl mx-auto mb-6">
-            <div className="flex items-center gap-3">
+        <div className="w-full max-w-6xl mx-auto mb-8">
+            <div className="flex items-center gap-3 mb-2">
                 <div className="h-8 w-1.5 bg-emerald-600 rounded-full"></div>
-                <h1 className="text-3xl font-black text-gray-900 tracking-tight">Módulo de Nómina</h1>
+                <h1 className="text-3xl font-black text-gray-900 tracking-tight">Panel de Nómina</h1>
             </div>
+            <p className="text-gray-500 font-medium ml-4">Genera los reportes de pago para administración y los recibos individuales para los maestros.</p>
         </div>
 
-        <div className="bg-white p-12 rounded-[3rem] shadow-2xl shadow-emerald-900/5 border border-gray-100 max-w-xl w-full text-center">
-          <div className="w-24 h-24 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-          </div>
-          <h2 className="text-3xl font-black text-gray-900 mb-2">Cierre de Nómina</h2>
-          <p className="text-gray-500 font-medium mb-8">El sistema generará el corte de la semana actual con las horas registradas por los docentes.</p>
+        <div className="w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
           
-          <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 mb-8 text-left">
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Período a procesar</p>
-              <div className="flex flex-col gap-2">
-                  <div className="flex items-center gap-3">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                      <p className="text-gray-700 font-bold text-sm">
-                          Inicio: <span className="text-gray-900 capitalize">{inicio.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
-                      </p>
+          {/* COLUMNA IZQUIERDA: CALENDARIO */}
+          <div className="lg:col-span-5">
+              <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100 relative overflow-hidden h-full">
+                  <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mb-6 border border-emerald-100">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
                   </div>
-                  <div className="flex items-center gap-3">
-                      <span className="w-2 h-2 rounded-full bg-red-500"></span>
-                      <p className="text-gray-700 font-bold text-sm">
-                          Cierre: <span className="text-gray-900 capitalize">{fin.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
-                      </p>
+                  
+                  <h2 className="text-2xl font-black text-gray-900 mb-2">Elegir Fechas</h2>
+                  <p className="text-gray-500 text-sm mb-8">Selecciona el lunes de inicio y el domingo de cierre de la semana que quieres pagar.</p>
+                  
+                  <div className="space-y-6">
+                      <div>
+                          <label className="block text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-2 ml-1">Inicia el:</label>
+                          <input 
+                              type="date" 
+                              value={fechaInicio}
+                              onChange={(e) => setFechaInicio(e.target.value)}
+                              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900 font-bold focus:bg-white focus:ring-2 focus:ring-emerald-100 focus:border-emerald-500 outline-none transition-all cursor-pointer shadow-sm"
+                          />
+                      </div>
+                      <div>
+                          <label className="block text-[10px] font-black text-red-500 uppercase tracking-widest mb-2 ml-1">Termina el:</label>
+                          <input 
+                              type="date" 
+                              value={fechaFin}
+                              onChange={(e) => setFechaFin(e.target.value)}
+                              className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900 font-bold focus:bg-white focus:ring-2 focus:ring-red-100 focus:border-red-500 outline-none transition-all cursor-pointer shadow-sm"
+                          />
+                      </div>
                   </div>
               </div>
           </div>
-          
-          <button 
-            onClick={generarNomina}
-            disabled={cargando}
-            className={`w-full bg-emerald-600 text-white p-5 rounded-2xl font-black tracking-wider shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-all transform active:scale-95 ${cargando ? 'opacity-70 animate-pulse' : ''}`}
-          >
-            {cargando ? "PROCESANDO ASISTENCIAS..." : "GENERAR CORTE Y DESCARGAR"}
-          </button>
+
+          {/* COLUMNA DERECHA: DESCARGAS */}
+          <div className="lg:col-span-7 space-y-4">
+              <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">¿Qué deseas descargar?</h3>
+              
+              {/* Opción 1: Reporte General */}
+              <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-gray-100 hover:border-emerald-300 hover:shadow-md transition-all group flex flex-col sm:flex-row items-center justify-between gap-6">
+                  <div className="flex items-center gap-5">
+                      <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center shrink-0 group-hover:bg-emerald-600 group-hover:text-white transition-colors border border-emerald-100">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                      </div>
+                      <div>
+                          <h4 className="text-lg font-black text-gray-900">Lista Maestra de Pagos</h4>
+                          <p className="text-gray-500 text-xs max-w-xs leading-relaxed">Un solo archivo con los nombres de todos los profes y cuánto se le debe pagar a cada uno.</p>
+                      </div>
+                  </div>
+                  <button 
+                    onClick={() => generarNomina('general')}
+                    disabled={cargandoGeneral || cargandoZip}
+                    className="shrink-0 px-6 py-3.5 bg-emerald-600 text-white font-bold text-sm rounded-xl shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    {cargandoGeneral ? 'Cargando...' : 'Bajar Lista'}
+                  </button>
+              </div>
+
+              {/* Opción 2: Recibos ZIP */}
+              <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-gray-100 hover:border-blue-300 hover:shadow-md transition-all group flex flex-col sm:flex-row items-center justify-between gap-6">
+                  <div className="flex items-center gap-5">
+                      <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors border border-blue-100">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                          </svg>
+                      </div>
+                      <div>
+                          <h4 className="text-lg font-black text-gray-900">Recibos Individuales</h4>
+                          <p className="text-gray-500 text-xs max-w-xs leading-relaxed">Una carpeta comprimida (.zip) con los comprobantes de cada maestro por separado.</p>
+                      </div>
+                  </div>
+                  <button 
+                    onClick={() => generarNomina('individual')}
+                    disabled={cargandoGeneral || cargandoZip}
+                    className="shrink-0 px-6 py-3.5 bg-blue-600 text-white font-bold text-sm rounded-xl shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    {cargandoZip ? 'Comprimiendo...' : 'Bajar Carpeta'}
+                  </button>
+              </div>
+
+          </div>
         </div>
 
       </div>

@@ -9,3 +9,7 @@ export const getOfertasRequest = (programa) =>
 
 export const createOfertaAcademicaRequest = (asignacion) => 
     axios.post('/oferta-academica', asignacion);
+
+export const updateOfertaAcademicaRequest = (id, oferta) => axios.put(`/oferta-academica/${id}`, oferta);
+
+export const deleteOfertaAcademicaRequest = (id) => axios.delete(`/oferta-academica/${id}`);

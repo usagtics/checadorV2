@@ -6,7 +6,6 @@ const asistenciaDocenteSchema = new mongoose.Schema({
         ref: 'Docente', 
         required: true 
     },
-    // Estas referencias dependerán de cómo tengas tus otros modelos
     materia: { 
         type: mongoose.Schema.Types.ObjectId, 
         ref: 'Materia' 
@@ -22,12 +21,16 @@ const asistenciaDocenteSchema = new mongoose.Schema({
     },
     fecha: { 
         type: Date, 
-        default: Date.now // Guarda el día exacto
+        default: Date.now 
     },
     estatus: { 
         type: String, 
-        enum: ['A tiempo', 'Retardo', 'Falta'], 
+        enum: ['A tiempo', 'Retardo', 'Falta', 'Justificado'], 
         default: 'A tiempo' 
+    },
+    motivoJustificacion: {
+        type: String,
+        default: ''
     }
 }, {
     timestamps: true

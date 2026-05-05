@@ -15,18 +15,16 @@ const obtenerAsistenciaMes = async (docenteId) => {
     fechaInicioMes.setDate(1); 
     fechaInicioMes.setHours(0, 0, 0, 0);
 
-    // Buscamos las asistencias y le pegamos el nombre de la materia
     const historial = await AsistenciaDocente.find({
         docente: docenteId,
         fecha: { $gte: fechaInicioMes }
     })
     .populate('materia')
-    .sort({ fecha: -1 }); // Las más nuevas primero para la tabla
+    .sort({ fecha: -1 }); 
 
     let horasTotales = 0;
     let entradaTemporal = null;
 
-    // Invertimos el arreglo solo para calcular las horas correctamente (de viejo a nuevo)
     const historialParaCalculo = [...historial].reverse();
 
     historialParaCalculo.forEach(registro => {
@@ -42,7 +40,7 @@ const obtenerAsistenciaMes = async (docenteId) => {
 
     return {
         horasAcumuladas: Math.round(horasTotales * 10) / 10,
-        historialDetallado: historial // La lista completa para la tabla
+        historialDetallado: historial 
     };
 };
 
@@ -71,7 +69,6 @@ export const loginDocente = async (req, res) => {
             }
         });
 
-        // 🪄 Traemos horas y la tabla de historial
         const datosAsistencia = await obtenerAsistenciaMes(docenteFound._id);
 
         res.cookie('token', token);
@@ -82,12 +79,11 @@ export const loginDocente = async (req, res) => {
             numeroEmpleado: docenteFound.numeroEmpleado,
             email: docenteFound.email,
             turno: docenteFound.turno,
-            pagoPorHora: docenteFound.pagoPorHora,
             qrCode: docenteFound.qrCode,
             role: 'docente',
             materias: materiasUnicas,
             horasAcumuladas: datosAsistencia.horasAcumuladas,
-            historialAsistencias: datosAsistencia.historialDetallado // ✅ NUEVO DATO PARA REACT
+            historialAsistencias: datosAsistencia.historialDetallado 
         });
     } catch (error) {
         console.log("❌ ERROR EN LOGIN DOCENTE:", error);
@@ -119,7 +115,6 @@ export const verifyDocenteToken = async (req, res) => {
             }
         });
 
-        // 🪄 Traemos horas y la tabla de historial
         const datosAsistencia = await obtenerAsistenciaMes(docenteFound._id);
 
         return res.json({
@@ -129,12 +124,11 @@ export const verifyDocenteToken = async (req, res) => {
             numeroEmpleado: docenteFound.numeroEmpleado, 
             email: docenteFound.email,
             turno: docenteFound.turno, 
-            pagoPorHora: docenteFound.pagoPorHora, 
             qrCode: docenteFound.qrCode, 
             role: 'docente',
             materias: materiasUnicas,
             horasAcumuladas: datosAsistencia.horasAcumuladas,
-            historialAsistencias: datosAsistencia.historialDetallado // ✅ NUEVO DATO PARA REACT
+            historialAsistencias: datosAsistencia.historialDetallado 
         });
     });
 };
@@ -144,12 +138,21 @@ export const verifyDocenteToken = async (req, res) => {
 // =======================================================
 export const crearDocente = async (req, res) => {
     try {
-        const { nombre, apellidos, numeroEmpleado, email, pagoPorHora, turno, username, password } = req.body;
+        // ✅ ACTUALIZADO: Recibimos los nuevos campos de pago desde el frontend
+        const { nombre, apellidos, numeroEmpleado, email, pagoHoraMatutino, pagoHoraSabatino, pagoHoraLinea, metodoPago, turno, username, password } = req.body;
+        
         const docenteExistente = await Docente.findOne({ $or: [{ numeroEmpleado }, { email }, { username }] });
         if (docenteExistente) return res.status(400).json({ message: ['Registrado'] });
+        
         const passwordHash = await bcrypt.hash(password, 10);
         const qrCodeImage = await QRCode.toDataURL(numeroEmpleado); 
-        const nuevoDocente = new Docente({ nombre, apellidos, numeroEmpleado, email, username, password: passwordHash, pagoPorHora, turno, qrCode: qrCodeImage });
+        
+        const nuevoDocente = new Docente({ 
+            nombre, apellidos, numeroEmpleado, email, username, password: passwordHash, 
+            pagoHoraMatutino, pagoHoraSabatino, pagoHoraLinea, metodoPago, turno, // ✅ Guardamos el tabulador completo
+            qrCode: qrCodeImage 
+        });
+        
         const docenteGuardado = await nuevoDocente.save();
         res.status(201).json(docenteGuardado);
     } catch (error) { res.status(500).json({ message: ['Error'] }); }
@@ -158,16 +161,32 @@ export const crearDocente = async (req, res) => {
 export const obtenerDocentes = async (req, res) => {
     try {
         const docentes = await Docente.find().lean();
-        const ofertas = await OfertaAcademica.find().populate('materia');
+        
+        // ✅ EL TRUCO ESTÁ AQUÍ: Hacemos populate tanto de 'materia' como de 'grupo'
+        const ofertas = await OfertaAcademica.find().populate('materia').populate('grupo').lean();
+        
         const docentesConMaterias = docentes.map(docente => {
+            // Buscamos todas las asignaciones del maestro
             const susOfertas = ofertas.filter(o => o.docente && o.docente.toString() === docente._id.toString());
+            
+            // Lógica original para la columna de "Materia(s) Asignada(s)"
             const materiasUnicas = [];
             const nombresAgregados = new Set();
             susOfertas.forEach(o => {
-                if (o.materia && !nombresAgregados.has(o.materia.nombre)) { nombresAgregados.add(o.materia.nombre); materiasUnicas.push(o.materia); }
+                if (o.materia && !nombresAgregados.has(o.materia.nombre)) { 
+                    nombresAgregados.add(o.materia.nombre); 
+                    materiasUnicas.push(o.materia); 
+                }
             });
-            return { ...docente, materias: materiasUnicas };
+            
+            // ✅ Devolvemos el docente con sus materias resumidas Y su horario completo
+            return { 
+                ...docente, 
+                materias: materiasUnicas, 
+                ofertaAcademica: susOfertas // Esto es lo que lee tu nuevo Modal
+            };
         });
+        
         res.json(docentesConMaterias);
     } catch (error) { res.status(500).json({ message: error.message }); }
 };

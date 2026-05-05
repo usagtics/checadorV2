@@ -5,11 +5,12 @@ import { Link } from 'react-router-dom';
 import MenuDocentes from '../../menu/MenuDocentes'; 
 
 export default function DocentesListPage() {
-  // Usamos el context de docentes que ya tiene la lógica de carga
   const { getDocentes, docentes, loading } = useDocentes();
   const { user } = useDirectivo();
   
   const [showQRModal, setShowQRModal] = useState(false);
+  // ✅ NUEVO: Estado para controlar el Modal del Horario
+  const [showHorarioModal, setShowHorarioModal] = useState(false);
   const [selectedDocente, setSelectedDocente] = useState(null);
 
   useEffect(() => {
@@ -19,6 +20,12 @@ export default function DocentesListPage() {
   const handleViewQR = (docente) => {
     setSelectedDocente(docente);
     setShowQRModal(true);
+  };
+
+  // ✅ NUEVO: Función para abrir el horario
+  const handleViewHorario = (docente) => {
+    setSelectedDocente(docente);
+    setShowHorarioModal(true);
   };
 
   const descargarQR = () => {
@@ -38,13 +45,12 @@ export default function DocentesListPage() {
   );
 
   return (
-    // ✅ CAMBIO CLAVE 1: El contenedor principal ahora divide la pantalla en 2 (flex, h-screen, overflow-hidden)
     <div className="flex h-screen bg-gray-50 font-sans selection:bg-blue-900/10 overflow-hidden">
       
-      {/* --- MENÚ LATERAL (Izquierda) --- */}
+      {/* --- MENÚ LATERAL --- */}
       <MenuDocentes />
 
-      {/* --- CONTENIDO PRINCIPAL (Derecha con scroll propio) --- */}
+      {/* --- CONTENIDO PRINCIPAL --- */}
       <div className="flex-1 overflow-y-auto p-4 md:p-10">
         <div className="max-w-7xl mx-auto">
           
@@ -116,6 +122,18 @@ export default function DocentesListPage() {
 
                       <td className="px-8 py-6 text-center">
                         <div className="flex justify-center gap-2">
+                          
+                          {/* ✅ NUEVO: Botón Ver Horario (Calendario) */}
+                          <button 
+                            onClick={() => handleViewHorario(docente)}
+                            className="p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-xl transition-all border border-indigo-100 shadow-sm"
+                            title="Ver Horario"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                          </button>
+
                           {/* Botón Ver QR */}
                           <button 
                             onClick={() => handleViewQR(docente)}
@@ -182,6 +200,86 @@ export default function DocentesListPage() {
                 Cerrar Visor
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ✅ NUEVO: MODAL PARA MOSTRAR EL HORARIO */}
+      {showHorarioModal && selectedDocente && (
+        <div className="fixed inset-0 bg-blue-900/40 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+          <div className="bg-white rounded-[3rem] p-8 md:p-10 max-w-2xl w-full shadow-2xl animate-in fade-in zoom-in duration-300">
+            
+            {/* Cabecera del Modal */}
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h2 className="text-2xl font-black text-gray-900 mb-1">Horario Asignado</h2>
+                <p className="text-indigo-600 font-bold text-[10px] uppercase tracking-widest">
+                  Prof. {selectedDocente.nombre} {selectedDocente.apellidos}
+                </p>
+              </div>
+              <button onClick={() => setShowHorarioModal(false)} className="w-10 h-10 bg-gray-50 text-gray-400 rounded-full flex items-center justify-center hover:bg-gray-100 hover:text-gray-600 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Tabla del Horario */}
+            <div className="bg-gray-50 rounded-[2rem] border border-gray-100 overflow-hidden mb-6">
+              <div className="overflow-x-auto max-h-[50vh]">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-gray-100/50 border-b border-gray-200 sticky top-0">
+                      <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-gray-500 font-black">Materia y Grupo</th>
+                      <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-gray-500 font-black">Día</th>
+                      <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-gray-500 font-black">Horario</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 bg-white">
+                    {/* Renderizamos el horario leyendo el arreglo 'ofertaAcademica' (o similar) del docente */}
+                    {selectedDocente.ofertaAcademica && selectedDocente.ofertaAcademica.length > 0 ? (
+                      selectedDocente.ofertaAcademica.map((oferta, idx) => (
+                        <React.Fragment key={idx}>
+                          {oferta.horarios && oferta.horarios.length > 0 ? (
+                            oferta.horarios.map((horario, hIdx) => (
+                              <tr key={`${idx}-${hIdx}`} className="hover:bg-indigo-50/30 transition-colors">
+                                <td className="px-6 py-4">
+                                  <span className="font-bold text-gray-900 block leading-tight">
+                                    {oferta.materia?.nombre || 'Materia sin nombre'}
+                                  </span>
+                                  <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest block mt-1">
+                                    Grupo: {oferta.grupo?.nombre || 'General'}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 font-bold text-gray-700 capitalize">
+                                  {horario.dia}
+                                </td>
+                                <td className="px-6 py-4 text-indigo-600 font-black text-sm">
+                                  {horario.horaInicio} - {horario.horaFin}
+                                </td>
+                              </tr>
+                            ))
+                          ) : null}
+                        </React.Fragment>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="3" className="px-6 py-12 text-center text-gray-400 font-bold text-sm">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 mx-auto mb-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          Aún no se le han asignado horas de clase a este docente.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <button onClick={() => setShowHorarioModal(false)} className="w-full bg-indigo-600 text-white font-black py-4 rounded-2xl flex items-center justify-center hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20">
+              CERRAR HORARIO
+            </button>
           </div>
         </div>
       )}

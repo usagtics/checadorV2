@@ -11,7 +11,6 @@ export const registrarAsistenciaQR = async (req, res) => {
     try {
         let { numeroEmpleado } = req.body;
 
-        // 1. LIMPIEZA DE DATOS
         if (numeroEmpleado && typeof numeroEmpleado === 'object' && numeroEmpleado.numeroEmpleado) {
             numeroEmpleado = numeroEmpleado.numeroEmpleado;
         }
@@ -21,7 +20,6 @@ export const registrarAsistenciaQR = async (req, res) => {
             return res.status(400).json({ message: 'No se recibió un código QR válido.' });
         }
 
-        // 2. BÚSQUEDA DEL DOCENTE
         const docente = await Docente.findOne({ 
             numeroEmpleado: { $regex: new RegExp(`^${numeroEmpleado}$`, 'i') } 
         });
@@ -30,63 +28,83 @@ export const registrarAsistenciaQR = async (req, res) => {
             return res.status(404).json({ message: 'Docente no encontrado.' });
         }
 
-        // 3. DATOS DE TIEMPO Y LIMITES DEL DÍA
         const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
         const fechaActual = new Date();
         const diaHoy = diasSemana[fechaActual.getDay()];
         const horaActualMinutos = fechaActual.getHours() * 60 + fechaActual.getMinutes();
         
-        // Bloqueamos exactamente desde las 00:00:00 hasta las 23:59:59 de hoy
         const inicioDia = new Date();
         inicioDia.setHours(0, 0, 0, 0);
         const finDia = new Date();
         finDia.setHours(23, 59, 59, 999);
 
 
-        // ==========================================
-        // 4. NUEVO: BUSCAR LA PRIMERA CLASE DEL DÍA (BLOQUE)
-        // ==========================================
         const clasesAsignadas = await OfertaAcademica.find({ docente: docente._id })
             .populate('materia')
             .populate('grupo');
 
         let primeraClaseHoy = null;
         let primerHorarioHoy = null;
-        let menorHoraInicio = 9999; // Número grande para encontrar la más temprana
+        let menorHoraInicio = 9999; 
+        let mayorHoraFin = 0; 
+        
+        let nombresMateriasHoy = [];
 
-        // Buscamos la clase que empiece más temprano hoy
         for (const oferta of clasesAsignadas) {
             const horarioHoy = oferta.horarios.find(h => h.diaSemana === diaHoy);
             
             if (horarioHoy) {
+                if (oferta.materia && oferta.materia.nombre) {
+                    nombresMateriasHoy.push(oferta.materia.nombre);
+                }
+
                 const inicioMinutos = convertirHoraAMinutos(horarioHoy.horaInicio);
+                const finMinutos = convertirHoraAMinutos(horarioHoy.horaFin);
                 
                 if (inicioMinutos < menorHoraInicio) {
                     menorHoraInicio = inicioMinutos;
                     primeraClaseHoy = oferta;
                     primerHorarioHoy = horarioHoy;
                 }
+                
+                if (finMinutos > mayorHoraFin) {
+                    mayorHoraFin = finMinutos;
+                }
             }
         }
 
-        // Si no tiene clases programadas para hoy
         if (!primeraClaseHoy) {
             return res.status(400).json({ message: `No tienes clases asignadas para el día de hoy (${diaHoy}).` });
         }
 
+   
+        const limiteTemprano = menorHoraInicio - 60; 
+        const limiteTarde = mayorHoraFin + 120; 
 
-        // ==========================================
-        // 5. VALIDACIÓN EXACTA Y REGISTRO (Usando 'fecha' y 'tipoRegistro')
-        // ==========================================
+        if (horaActualMinutos < limiteTemprano) {
+            return res.status(400).json({ 
+                message: `Demasiado temprano. Tu primera clase comienza a las ${primerHorarioHoy.horaInicio}.` 
+            });
+        }
+
+        if (horaActualMinutos > limiteTarde) {
+            const hFin = Math.floor(mayorHoraFin / 60);
+            const mFin = mayorHoraFin % 60;
+            const horaFinFormato = `${String(hFin).padStart(2, '0')}:${String(mFin).padStart(2, '0')}`;
+            
+            return res.status(400).json({ 
+                message: `Tu jornada finalizó a las ${horaFinFormato}. Fuera de horario permitido.` 
+            });
+        }
+
+        const bloqueMateriasString = [...new Set(nombresMateriasHoy)].join(' / ');
         
-        // Contamos las entradas de HOY
         const totalEntradasHoy = await AsistenciaDocente.countDocuments({
             docente: docente._id,
             tipoRegistro: 'Entrada', 
             fecha: { $gte: inicioDia, $lte: finDia }
         });
 
-        // Buscamos el último registro de HOY
         const ultimaChecada = await AsistenciaDocente.findOne({
             docente: docente._id,
             fecha: { $gte: inicioDia, $lte: finDia }
@@ -94,19 +112,14 @@ export const registrarAsistenciaQR = async (req, res) => {
 
         const horaEscaneo = new Date(); 
 
-        // --- LÓGICA DE DECISIÓN ---
-
-        // CASO A: TOCA REGISTRAR ENTRADA
         if (!ultimaChecada || ultimaChecada.tipoRegistro === 'Salida') {
             
-            // EL BLOQUEO: YA TIENE 2 ENTRADAS
             if (totalEntradasHoy >= 2) {
                 return res.status(400).json({ 
                     message: `Límite excedido: Ya registraste tus 2 entradas de hoy. No puedes checar más veces.` 
                 });
             }
 
-            // REGISTRO DE ENTRADA (Calculando puntualidad según su PRIMERA clase)
             const inicioClaseMinutos = convertirHoraAMinutos(primerHorarioHoy.horaInicio);
             let estatusCalculado = 'A tiempo';
             if (horaActualMinutos > (inicioClaseMinutos + 30)) estatusCalculado = 'Falta';
@@ -114,7 +127,7 @@ export const registrarAsistenciaQR = async (req, res) => {
 
             const nuevaEntrada = new AsistenciaDocente({
                 docente: docente._id,
-                materia: primeraClaseHoy.materia._id, // Relacionamos con su primera clase
+                materia: primeraClaseHoy.materia._id, 
                 grupo: primeraClaseHoy.grupo._id,
                 tipoRegistro: 'Entrada', 
                 fecha: horaEscaneo, 
@@ -123,18 +136,16 @@ export const registrarAsistenciaQR = async (req, res) => {
             await nuevaEntrada.save();
 
             return res.status(200).json({
-                message: `Entrada #${totalEntradasHoy + 1} de 2 registrada.`,
+                message: `Entrada registrada. Jornada: ${bloqueMateriasString}`,
                 docente: `${docente.nombre} ${docente.apellidos}`,
-                clase: primeraClaseHoy.materia.nombre, // Mostramos la materia de su primera clase
+                clase: bloqueMateriasString, 
                 tipo: 'Entrada',
                 estatus: estatusCalculado
             });
 
         } else {
-            // CASO B: TOCA REGISTRAR SALIDA
             const diferenciaMinutos = (horaEscaneo - ultimaChecada.fecha) / (1000 * 60);
 
-            // ERROR: INTENTO DE SALIDA MUY PRONTO (20 min de bloqueo por seguridad)
             if (diferenciaMinutos < 20) {
                 const faltan = Math.ceil(20 - diferenciaMinutos);
                 return res.status(400).json({ 
@@ -142,7 +153,6 @@ export const registrarAsistenciaQR = async (req, res) => {
                 });
             }
 
-            // REGISTRO DE SALIDA
             const nuevaSalida = new AsistenciaDocente({
                 docente: docente._id,
                 materia: primeraClaseHoy.materia._id, 
@@ -159,7 +169,6 @@ export const registrarAsistenciaQR = async (req, res) => {
                 tipo: 'Salida',
                 estatus: 'A tiempo'
             });
-            
         }
 
     } catch (error) {
@@ -167,65 +176,103 @@ export const registrarAsistenciaQR = async (req, res) => {
         res.status(500).json({ message: 'Error interno del servidor.' });
     }
 };
+
 export const obtenerTodasLasAsistencias = async (req, res) => {
     try {
-   
-        const asistencias = await AsistenciaDocente.find()
+        const asistenciasBrutas = await AsistenciaDocente.find()
             .populate('docente', 'nombre apellidos numeroEmpleado turno')
             .populate('materia', 'nombre')
             .populate('grupo', 'nombre')
-            .sort({ fecha: -1 }); 
+            .sort({ fecha: -1 })
+            .lean(); 
 
-        res.status(200).json(asistencias);
+        const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+        const asistenciasProcesadas = await Promise.all(asistenciasBrutas.map(async (asistencia) => {
+            if (!asistencia.docente) return asistencia;
+
+            const diaChecada = diasSemana[new Date(asistencia.fecha).getDay()];
+            const clases = await OfertaAcademica.find({ docente: asistencia.docente._id }).populate('materia');
+            
+            const materiasDelDia = [];
+            clases.forEach(clase => {
+                const tieneClaseHoy = clase.horarios.some(h => h.diaSemana === diaChecada);
+                if (tieneClaseHoy && clase.materia && clase.materia.nombre) {
+                    materiasDelDia.push(clase.materia.nombre);
+                }
+            });
+
+            const materiasUnicas = [...new Set(materiasDelDia)].join(' / ');
+
+            return {
+                ...asistencia,
+                materia: {
+                    ...asistencia.materia,
+                    nombre: materiasUnicas || (asistencia.materia?.nombre || 'Jornada')
+                }
+            };
+        }));
+
+        res.status(200).json(asistenciasProcesadas);
     } catch (error) {
-        console.error("❌ Error al obtener el reporte de checadas:", error);
+        console.error("Error al obtener el reporte de checadas:", error);
         res.status(500).json({ message: 'Error interno al obtener las asistencias.' });
     }
 };
 
-
+const crearFechaConHora = (fechaBase, horaString) => {
+    const [horas, minutos] = horaString.split(':').map(Number);
+    const nuevaFecha = new Date(fechaBase);
+    nuevaFecha.setHours(horas, minutos, 0, 0);
+    return nuevaFecha;
+};
 export const getNominaDetalle = async (req, res) => {
     try {
         const { fechaInicio, fechaFin } = req.query;
         
-        // 1. Buscamos todas las checadas en esa semana exacta
-        // Le agregamos la hora 00:00:00 al inicio y 23:59:59 al fin para no perder ningún registro
         const asistencias = await AsistenciaDocente.find({
             fecha: { 
                 $gte: new Date(`${fechaInicio}T00:00:00.000Z`), 
                 $lte: new Date(`${fechaFin}T23:59:59.999Z`) 
             }
-        }).populate('docente materia grupo').sort({ fecha: 1 });
+        }).populate('docente grupo').sort({ fecha: 1 });
 
         const emparejamiento = {};
         const nomina = {};
 
-        // 2. Emparejamos "Entradas" con "Salidas" del mismo día y mismo profe
         asistencias.forEach(registro => {
             if (!registro.docente) return;
             
             const docenteId = registro.docente._id.toString();
-            const fechaCorta = registro.fecha.toISOString().split('T')[0];
+            const fechaCorta = registro.fecha.toLocaleDateString('en-CA'); 
             const llaveUnica = `${docenteId}_${fechaCorta}`; 
 
             if (!emparejamiento[llaveUnica]) {
                 emparejamiento[llaveUnica] = { 
                     entrada: null, 
                     salida: null, 
-                    docente: registro.docente, 
-                    grupo: registro.grupo,
-                    materia: registro.materia
+                    docente: registro.docente,
+                    fechaFisica: registro.fecha 
                 };
             }
 
-            if (registro.tipoRegistro === 'Entrada') emparejamiento[llaveUnica].entrada = registro.fecha;
-            if (registro.tipoRegistro === 'Salida') emparejamiento[llaveUnica].salida = registro.fecha;
+            if (registro.tipoRegistro === 'Entrada' && !emparejamiento[llaveUnica].entrada) {
+                emparejamiento[llaveUnica].entrada = registro.fecha;
+            }
+            if (registro.tipoRegistro === 'Salida') {
+                emparejamiento[llaveUnica].salida = registro.fecha;
+            }
         });
 
-        for (const par of Object.values(emparejamiento)) {
+    
+        const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+        const paresValores = Object.values(emparejamiento);
+        
+        for (let i = 0; i < paresValores.length; i++) {
+            const par = paresValores[i];
             const docenteId = par.docente._id.toString();
             
-            // Si es la primera vez que procesamos a este profe, le creamos su "recibo" en blanco
             if (!nomina[docenteId]) {
                 nomina[docenteId] = {
                     nombre: `${par.docente.nombre} ${par.docente.apellidos}`,
@@ -237,41 +284,86 @@ export const getNominaDetalle = async (req, res) => {
                 };
             }
 
-            if (par.entrada && par.salida) {
-                
-                let turnoAsignado = null;
-                
-                if (par.materia && par.grupo) {
-                     const oferta = await OfertaAcademica.findOne({
-                         docente: par.docente._id,
-                         materia: par.materia._id,
-                         grupo: par.grupo._id
-                     });
-                     if (oferta) {
-                         turnoAsignado = oferta.turno;
-                     }
-                }
+            if (par.entrada && par.salida && par.entrada < par.salida) {
+                const diaDeLaSemana = diasSemana[par.fechaFisica.getDay()];
 
-                const horas = (new Date(par.salida) - new Date(par.entrada)) / (1000 * 60 * 60);
-                
-                const turnoFinal = turnoAsignado || par.grupo?.turno || par.docente.turno;
+                const clasesAsignadas = await OfertaAcademica.find({ docente: par.docente._id })
+                    .populate('materia grupo');
 
-                if (turnoFinal === 'Sabatino') {
-                    nomina[docenteId].horasSabatinas += horas;
-                    nomina[docenteId].total += (horas * (par.docente.pagoHoraSabatino || 200));
-                } else if (turnoFinal === 'Virtual' || turnoFinal === 'Línea') {
-                    nomina[docenteId].horasLinea += horas;
-                    nomina[docenteId].total += (horas * (par.docente.pagoHoraLinea || 250));
-                } else {
-                    nomina[docenteId].horasMatutinas += horas;
-                    nomina[docenteId].total += (horas * (par.docente.pagoHoraMatutino || 200));
+                for (let j = 0; j < clasesAsignadas.length; j++) {
+                    const oferta = clasesAsignadas[j];
+                    const horarioHoy = oferta.horarios.find(h => h.diaSemana === diaDeLaSemana);
+                    
+                    if (horarioHoy) {
+                        const inicioClase = crearFechaConHora(par.fechaFisica, horarioHoy.horaInicio);
+                        const finClase = crearFechaConHora(par.fechaFisica, horarioHoy.horaFin);
+
+                   
+                        const toleranciaValida = par.entrada <= new Date(inicioClase.getTime() + (30 * 60000));
+                        
+                        const registroEntradaOficial = await AsistenciaDocente.findOne({
+                            docente: par.docente._id,
+                            fecha: par.entrada,
+                            tipoRegistro: 'Entrada'
+                        });
+
+                        const fueJustificado = registroEntradaOficial && registroEntradaOficial.estatus === 'Justificado';
+                        const llegoAClase = toleranciaValida || fueJustificado;
+                        
+                        const seQuedoAlFinal = par.salida >= finClase;
+
+                        if (llegoAClase && seQuedoAlFinal) {
+                            const horasAprobadas = (finClase - inicioClase) / (1000 * 60 * 60);
+                            const turnoFinal = oferta.turno || oferta.grupo?.turno || par.docente.turno;
+
+                            if (turnoFinal === 'Sabatino') {
+                                nomina[docenteId].horasSabatinas += horasAprobadas;
+                                nomina[docenteId].total += (horasAprobadas * (par.docente.pagoHoraSabatino || 200));
+                            } else if (turnoFinal === 'Virtual' || turnoFinal === 'Línea') {
+                                nomina[docenteId].horasLinea += horasAprobadas;
+                                nomina[docenteId].total += (horasAprobadas * (par.docente.pagoHoraLinea || 250));
+                            } else {
+                                nomina[docenteId].horasMatutinas += horasAprobadas;
+                                nomina[docenteId].total += (horasAprobadas * (par.docente.pagoHoraMatutino || 200));
+                            }
+                        }
+                    }
                 }
             }
         }
 
         res.json(Object.values(nomina));
     } catch (error) {
-        console.error("❌ Error interno al calcular nómina:", error);
+        console.error("Error interno al calcular nómina:", error);
         res.status(500).json({ message: "Error al calcular nómina" });
+    }
+};
+
+export const justificarAsistencia = async (req, res) => {
+    try {
+        const { id } = req.params; 
+        const { motivo } = req.body; 
+
+        const asistenciaActualizada = await AsistenciaDocente.findByIdAndUpdate(
+            id,
+            { 
+                estatus: 'Justificado',
+                motivoJustificacion: motivo || 'Sin motivo especificado'
+            },
+            { new: true }
+        );
+
+        if (!asistenciaActualizada) {
+            return res.status(404).json({ message: "No se encontró el registro de asistencia." });
+        }
+
+        res.status(200).json({ 
+            message: "Registro justificado exitosamente.",
+            asistencia: asistenciaActualizada 
+        });
+
+    } catch (error) {
+        console.error("Error al justificar:", error);
+        res.status(500).json({ message: "Error interno al justificar el registro." });
     }
 };

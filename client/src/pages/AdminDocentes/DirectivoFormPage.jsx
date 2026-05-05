@@ -64,7 +64,7 @@ export default function DirectivoFormPage() {
                                 type="text" 
                                 {...register("username", { required: "El nombre es obligatorio" })}
                                 className="w-full bg-gray-50 border-none rounded-2xl p-4 text-sm focus:bg-white focus:ring-2 focus:ring-blue-600 transition-all font-bold text-gray-700 outline-none"
-                                placeholder="Ej. Dr. Armando Paredes"
+                                placeholder=""
                             />
                             {errors.username && <p className="text-red-500 text-[9px] font-black ml-4 mt-1 uppercase">{errors.username.message}</p>}
                         </div>

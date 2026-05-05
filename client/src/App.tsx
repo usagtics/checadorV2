@@ -148,12 +148,10 @@ function AuthContent() {
     return <NavbarAdmin />;
   }
 
-  // 3. Si es un usuario general (colaborador), le mostramos la normal
   if (isAuth) {
     return <Navbar />;
   }
 
-  // 4. Si nadie ha iniciado sesión, no mostramos nada (Login limpio)
   return null;
 }
 

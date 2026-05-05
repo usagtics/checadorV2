@@ -3,9 +3,11 @@ import OfertaAcademica from '../models/ofertaAcademica.model.js';
 // 1. Crear una nueva asignación
 export const crearOferta = async (req, res) => {
     try {
-        const { docente, materia, grupo, horarios, periodo } = req.body;
-        const nuevaOferta = new OfertaAcademica({ docente, materia, grupo, horarios, periodo });
+        const { docente, materia, grupo, horarios, periodo, turno } = req.body; 
+        
+        const nuevaOferta = new OfertaAcademica({ docente, materia, grupo, horarios, periodo, turno });
         const ofertaGuardada = await nuevaOferta.save();
+        
         res.status(201).json(ofertaGuardada);
     } catch (error) {
         res.status(500).json({ message: 'Error al asignar la oferta académica', error: error.message });
