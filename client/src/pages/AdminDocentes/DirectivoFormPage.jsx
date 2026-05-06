@@ -1,9 +1,8 @@
-import React from "react"; 
+import { useState, useEffect, ChangeEvent, FormEvent } from 'react';
 import { useForm } from "react-hook-form";
 import { useDirectivo } from "../../context/DirectivoContext";
 import { useNavigate, Link } from "react-router-dom";
 
-// ✅ IMPORTAMOS TU MENÚ LATERAL
 import MenuDocentes from '../../menu/MenuDocentes';
 
 export default function DirectivoFormPage() {

@@ -43,7 +43,6 @@ const upload = multer({ storage });
 
 const app = express();
 
-// --- CONFIGURACIÓN DE CORS ADAPTADA PARA HOSTINGER ---
 app.use(cors({
   origin: [
     "http://localhost:5173",

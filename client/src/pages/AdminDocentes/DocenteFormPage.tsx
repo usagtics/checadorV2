@@ -1,4 +1,4 @@
-import React, { useState, useEffect, ChangeEvent, FormEvent } from 'react';
+import { useState, useEffect, ChangeEvent, FormEvent } from 'react';
 import { useDocentes } from '../../context/DocenteContext';
 import { useNavigate, Link, useParams } from 'react-router-dom';
 import MenuDocentes from '../../menu/MenuDocentes';
@@ -12,7 +12,7 @@ interface DataToSend {
 }
 
 export default function DocenteFormPage() {
-    const { createDocente, getDocente, updateDocente, errors: formErrors } = useDocentes();
+    const { createDocente, getDocente, updateDocente } = useDocentes();
     const navigate = useNavigate();
     const params = useParams<{ id: string }>();
 
