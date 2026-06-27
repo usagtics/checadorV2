@@ -1,3 +1,4 @@
+import 'dotenv/config'; 
 import express from "express";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
@@ -8,11 +9,9 @@ import { dirname } from "path";
 import cors from "cors";
 import multer from "multer";         
 
-// RUTAS DE AUTENTICACIÓN
-import authRoutes from "./routes/auth.routes.js"; // Colaboradores/General
-import directivoAuthRoutes from "./routes/directivoAuth.routes.js"; // NUEVO: Gestión Académica
+import authRoutes from "./routes/auth.routes.js"; 
+import directivoAuthRoutes from "./routes/directivoAuth.routes.js"; 
 
-// OTRAS RUTAS
 import taskRoutes from './routes/tasks.routes.js';
 import employeesRoutes from './routes/empleados.routes.js';
 import tipohorariosRoutes from './routes/tipohorarios.routes.js';
@@ -23,6 +22,10 @@ import materiasRoutes from './routes/materias.routes.js';
 import gruposRoutes from './routes/grupos.routes.js';
 import ofertaAcademicaRoutes from './routes/ofertaAcademica.routes.js';
 import checadorDocenteRoutes from './routes/checadorDocente.routes.js';
+import periodosRoutes from './routes/periodos.routes.js'; 
+
+import teamsRoutes from './routes/teams.routes.js';
+import { obtenerToken } from './services/teamsService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -56,7 +59,6 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
-// -----------------------------------------------------
 
 app.use(morgan("dev"));
 app.use(express.json({ limit: "10mb" }));
@@ -78,6 +80,9 @@ app.use('/api', materiasRoutes);
 app.use('/api', gruposRoutes);
 app.use('/api', ofertaAcademicaRoutes);
 app.use('/api', checadorDocenteRoutes);
+app.use('/api', periodosRoutes); 
+
+app.use('/api', teamsRoutes);
 
 app.post("/api/upload", upload.single("photo"), (req, res) => {
   if (!req.file) {
@@ -85,5 +90,7 @@ app.post("/api/upload", upload.single("photo"), (req, res) => {
   }
   res.json({ message: "Archivo subido correctamente", filename: req.file.filename });
 });
+
+obtenerToken();
 
 export default app;

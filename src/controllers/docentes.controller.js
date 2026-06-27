@@ -7,7 +7,7 @@ import bcrypt from 'bcryptjs';
 import { TOKEN_SECRET } from '../config.js'; 
 import { createAccessToken } from '../libs/jwt.js';
 
-
+// Función auxiliar para calcular asistencias del mes
 const obtenerAsistenciaMes = async (docenteId) => {
     const fechaInicioMes = new Date();
     fechaInicioMes.setDate(1); 
@@ -42,7 +42,7 @@ const obtenerAsistenciaMes = async (docenteId) => {
     };
 };
 
-
+// Login de Docentes
 export const loginDocente = async (req, res) => {
     const { username, password } = req.body;
     try {
@@ -87,7 +87,7 @@ export const loginDocente = async (req, res) => {
     }
 };
 
-
+// Crear nuevo Docente
 export const crearDocente = async (req, res) => {
     try {
         const { 
@@ -119,7 +119,7 @@ export const crearDocente = async (req, res) => {
     }
 };
 
-
+// Verificar Token del Docente
 export const verifyDocenteToken = async (req, res) => {
     const { token } = req.cookies;
     if (!token) return res.status(401).json({ message: "No autorizado" });
@@ -159,11 +159,17 @@ export const verifyDocenteToken = async (req, res) => {
     });
 };
 
-
+// OBTENER TODOS LOS DOCENTES (CON LA CORRECCIÓN DEL POPULATE)
 export const obtenerDocentes = async (req, res) => {
     try {
         const docentes = await Docente.find().lean();
-        const ofertas = await OfertaAcademica.find().populate('materia').populate('grupo').lean();
+        
+        // CORRECCIÓN AQUÍ: Se añade .populate('periodo') para resolver el "Sin definir"
+        const ofertas = await OfertaAcademica.find()
+            .populate('materia')
+            .populate('grupo')
+            .populate('periodo') 
+            .lean();
         
         const docentesConMaterias = docentes.map(docente => {
             const susOfertas = ofertas.filter(o => o.docente && o.docente.toString() === docente._id.toString());
@@ -185,10 +191,12 @@ export const obtenerDocentes = async (req, res) => {
         });
         
         res.json(docentesConMaterias);
-    } catch (error) { res.status(500).json({ message: error.message }); }
+    } catch (error) { 
+        res.status(500).json({ message: error.message }); 
+    }
 };
 
-
+// Obtener un solo Docente por ID
 export const obtenerDocente = async (req, res) => {
     try {
         const docente = await Docente.findById(req.params.id);
@@ -197,7 +205,7 @@ export const obtenerDocente = async (req, res) => {
     } catch (error) { res.status(500).json({ message: error.message }); }
 };
 
-
+// Actualizar un Docente
 export const actualizarDocente = async (req, res) => {
     try {
         const data = { ...req.body };
@@ -213,6 +221,7 @@ export const actualizarDocente = async (req, res) => {
     } catch (error) { res.status(500).json({ message: error.message }); }
 };
 
+// Eliminar un Docente
 export const eliminarDocente = async (req, res) => {
     try {
         await Docente.findByIdAndDelete(req.params.id);
@@ -220,7 +229,7 @@ export const eliminarDocente = async (req, res) => {
     } catch (error) { res.status(500).json({ message: error.message }); }
 };
 
-
+// Logout Docente
 export const logoutDocente = (req, res) => {
     res.cookie('token', "", { expires: new Date(0) });
     return res.sendStatus(200);

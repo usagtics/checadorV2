@@ -1,19 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { useChecadasDocente } from '../../context/checadasDocenteContext'; 
 import { Link } from 'react-router-dom';
-
 import MenuDocentes from '../../menu/MenuDocentes';
+import axios from 'axios'; 
 
 const ReporteAsistenciaDocentesPage = () => {
   const { checadas, getChecadas, cargando, justificarAsistencia } = useChecadasDocente();
   const [busqueda, setBusqueda] = useState('');
-  
   const [procesandoId, setProcesandoId] = useState(null);
 
-  // ✅ NUEVOS ESTADOS PARA EL MODAL PERSONALIZADO
   const [modalAbierto, setModalAbierto] = useState(false);
   const [idAJustificar, setIdAJustificar] = useState(null);
   const [motivoTexto, setMotivoTexto] = useState('');
+
+  const [modalDetalleAbierto, setModalDetalleAbierto] = useState(false);
+  const [detalleDocente, setDetalleDocente] = useState(null);
 
   useEffect(() => {
     getChecadas();
@@ -32,23 +33,20 @@ const ReporteAsistenciaDocentesPage = () => {
   const totalRetardos = checadasFiltradas?.filter(c => c.estatus === 'Retardo').length || 0;
   const totalJustificados = checadasFiltradas?.filter(c => c.estatus === 'Justificado').length || 0;
 
-  // ✅ FUNCIÓN 1: Abre el modal y guarda el ID de la checada
   const abrirModalJustificar = (id) => {
       setIdAJustificar(id);
-      setMotivoTexto(''); // Limpiamos el texto anterior
+      setMotivoTexto(''); 
       setModalAbierto(true);
   };
 
-  // ✅ FUNCIÓN 2: Se ejecuta al darle "Guardar" dentro del Modal
   const confirmarJustificacion = async () => {
       if (motivoTexto.trim() === "") {
           alert("⚠️ Debes escribir un motivo.");
           return;
       }
-
       try {
           setProcesandoId(idAJustificar);
-          setModalAbierto(false); // Cerramos el modal
+          setModalAbierto(false); 
           await justificarAsistencia(idAJustificar, motivoTexto);
       } catch (error) {
           alert("Hubo un error al justificar. Intenta de nuevo.");
@@ -58,9 +56,36 @@ const ReporteAsistenciaDocentesPage = () => {
       }
   };
 
+  const abrirDetalleDia = async (checada) => {
+      try {
+          const fechaObj = new Date(checada.fecha);
+          const year = fechaObj.getFullYear();
+          const month = String(fechaObj.getMonth() + 1).padStart(2, '0');
+          const day = String(fechaObj.getDate()).padStart(2, '0');
+          const fechaCorta = `${year}-${month}-${day}`; 
+
+          const docenteId = checada.docente._id;
+          
+          const response = await axios.get(`http://localhost:4000/api/asistencias/desglose/${docenteId}?fecha=${fechaCorta}`);
+          
+          const { cronograma, totalHoras } = response.data;
+
+          setDetalleDocente({
+              nombre: `${checada.docente?.nombre} ${checada.docente?.apellidos}`,
+              fechaStr: new Date(checada.fecha).toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' }),
+              cronograma: cronograma,
+              totalPagar: totalHoras 
+          });
+          
+          setModalDetalleAbierto(true);
+      } catch (error) {
+          console.error("Error al cargar el desglose:", error);
+          alert("No se pudo cargar la línea de tiempo. Verifica la conexión con el servidor.");
+      }
+  };
+
   return (
     <div className="flex h-screen bg-gray-50 font-sans selection:bg-blue-900/10 overflow-hidden relative">
-      
       <MenuDocentes />
 
       <div className="flex-1 overflow-y-auto p-6 md:p-10">
@@ -79,9 +104,6 @@ const ReporteAsistenciaDocentesPage = () => {
               to="/admin/nomina" 
               className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs tracking-widest uppercase py-3.5 px-6 rounded-2xl shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-3 transition-all transform hover:-translate-y-1"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
               Generar Nómina
             </Link>
           </header>
@@ -128,9 +150,7 @@ const ReporteAsistenciaDocentesPage = () => {
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-6">
             <div className="relative w-full">
               <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-gray-400">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
               </span>
               <input
                 type="text"
@@ -149,7 +169,6 @@ const ReporteAsistenciaDocentesPage = () => {
                   <tr className="border-b border-gray-100">
                     <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Fecha y Hora</th>
                     <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Docente</th>
-                    <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Materia</th>
                     <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest">Registro</th>
                     <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Estatus</th>
                     <th className="px-8 py-5 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Acciones</th>
@@ -158,7 +177,7 @@ const ReporteAsistenciaDocentesPage = () => {
                 <tbody className="divide-y divide-gray-50">
                   {cargando ? (
                     <tr>
-                      <td colSpan="6" className="py-20 text-center">
+                      <td colSpan="5" className="py-20 text-center">
                         <div className="inline-block w-8 h-8 border-4 border-blue-200 border-t-blue-900 rounded-full animate-spin mb-2"></div>
                         <p className="text-gray-500 font-bold text-sm">Sincronizando reloj checador...</p>
                       </td>
@@ -166,6 +185,7 @@ const ReporteAsistenciaDocentesPage = () => {
                   ) : checadasFiltradas && checadasFiltradas.length > 0 ? (
                     checadasFiltradas.map((checada, idx) => (
                       <tr key={idx} className="hover:bg-blue-50/30 transition-colors">
+                        
                         <td className="px-8 py-4">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 bg-gray-50 rounded-xl flex flex-col items-center justify-center border border-gray-100">
@@ -178,6 +198,7 @@ const ReporteAsistenciaDocentesPage = () => {
                             </div>
                           </div>
                         </td>
+
                         <td className="px-8 py-4">
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-900 flex items-center justify-center font-black text-xs border border-blue-200">
@@ -189,81 +210,60 @@ const ReporteAsistenciaDocentesPage = () => {
                             </div>
                           </div>
                         </td>
-                        <td className="px-8 py-4">
-                            <span className="bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg text-xs font-bold border border-gray-200 block w-max">
-                                {checada.materia?.nombre || 'Sin asignación'}
-                            </span>
-                        </td>
+
                         <td className="px-8 py-4">
                           {checada.tipoRegistro === 'Entrada' ? (
                             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-700 text-xs font-black uppercase tracking-wider border border-indigo-100">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" /></svg>
                                 Entrada
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-50 text-orange-700 text-xs font-black uppercase tracking-wider border border-orange-100">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
                                 Salida
                             </span>
                           )}
                         </td>
+
+                        {/* ESTATUS */}
                         <td className="px-8 py-4 text-center">
-                          {checada.estatus === 'A tiempo' ? (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-black uppercase tracking-widest border border-emerald-100">
-                              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
-                              A Tiempo
-                            </span>
-                          ) : checada.estatus === 'Justificado' ? (
-                            <div className="flex flex-col items-center gap-1">
-                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-50 text-purple-700 text-[10px] font-black uppercase tracking-widest border border-purple-100">
-                                  <span className="w-1.5 h-1.5 bg-purple-500 rounded-full"></span>
-                                  Justificado
-                                </span>
-                                {checada.motivoJustificacion && (
-                                    <span 
-                                        className="text-[9px] font-bold text-gray-400 text-center max-w-[120px] leading-tight truncate cursor-help" 
-                                        title={checada.motivoJustificacion}
-                                    >
-                                       {checada.motivoJustificacion}
-                                    </span>
-                                )}
-                            </div>
-                          ) : checada.estatus === 'Retardo' ? (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 text-amber-700 text-[10px] font-black uppercase tracking-widest border border-amber-100">
-                              <span className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse"></span>
-                              Retardo
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-50 text-red-700 text-[10px] font-black uppercase tracking-widest border border-red-100">
-                              <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></span>
-                              Falta
-                            </span>
-                          )}
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                              checada.estatus === 'A tiempo' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                              checada.estatus === 'Retardo' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                              checada.estatus === 'Justificado' ? 'bg-purple-50 text-purple-700 border-purple-100' :
+                              'bg-red-50 text-red-700 border-red-100'
+                          }`}>
+                              {checada.estatus}
+                          </span>
                         </td>
                         
+                        {/* ACCIONES */}
                         <td className="px-8 py-4 text-center">
-                            {(checada.estatus === 'Retardo' || checada.estatus === 'Falta') && (
+                            <div className="flex items-center justify-center gap-2">
                                 <button
-                                    // ✅ CAMBIAMOS EL ONCLICK PARA QUE ABRA NUESTRO MODAL
-                                    onClick={() => abrirModalJustificar(checada._id)}
-                                    disabled={procesandoId === checada._id}
-                                    className="bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold text-[10px] uppercase tracking-widest px-4 py-2 rounded-xl transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    onClick={() => abrirDetalleDia(checada)}
+                                    className="bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-[10px] uppercase tracking-widest px-3 py-2 rounded-xl transition-all border border-blue-100"
+                                    title="Ver línea de tiempo del día"
                                 >
-                                    {procesandoId === checada._id ? 'Cargando...' : 'Justificar'}
+                                    Ver Detalle
                                 </button>
-                            )}
+
+                                {(checada.estatus === 'Retardo' || checada.estatus === 'Falta') && (
+                                    <button
+                                        onClick={() => abrirModalJustificar(checada._id)}
+                                        disabled={procesandoId === checada._id}
+                                        className="bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold text-[10px] uppercase tracking-widest px-3 py-2 rounded-xl transition-all disabled:opacity-50"
+                                    >
+                                        Justificar
+                                    </button>
+                                )}
+                            </div>
                         </td>
 
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="6" className="px-10 py-24 text-center">
-                          <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-gray-100">
-                              <svg className="w-10 h-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                          </div>
+                      <td colSpan="5" className="px-10 py-24 text-center">
                           <p className="text-gray-400 font-black text-sm uppercase tracking-widest">No hay checadas que coincidan</p>
-                          <p className="text-gray-400 text-xs mt-1">Intenta buscar con otro nombre o matrícula.</p>
                       </td>
                     </tr>
                   )}
@@ -275,53 +275,83 @@ const ReporteAsistenciaDocentesPage = () => {
         </div>
       </div>
 
+     
       {modalAbierto && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-            {/* Fondo oscuro desenfocado */}
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+               <div className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm" onClick={() => setModalAbierto(false)}></div>
+               <div className="bg-white rounded-3xl p-8 max-w-sm w-full relative z-10">
+                   <h3 className="text-xl font-black mb-2">Justificar Asistencia</h3>
+                   <textarea 
+                        rows="3" 
+                        value={motivoTexto} onChange={(e) => setMotivoTexto(e.target.value)}
+                        className="w-full border p-2 rounded mb-4"
+                    ></textarea>
+                   <button onClick={confirmarJustificacion} className="bg-purple-600 text-white p-2 rounded">Guardar</button>
+               </div>
+          </div>
+      )}
+
+      {modalDetalleAbierto && detalleDocente && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div 
-                className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity"
-                onClick={() => setModalAbierto(false)}
+                className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm transition-opacity"
+                onClick={() => setModalDetalleAbierto(false)}
             ></div>
             
-            {/* Tarjeta del Modal */}
-            <div className="bg-white rounded-3xl p-8 max-w-sm w-full mx-4 relative z-10 shadow-2xl border border-gray-100 animate-in zoom-in-95 duration-200">
+            <div className="bg-white rounded-[2rem] max-w-lg w-full relative z-10 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
                 
-                {/* Icono decorativo */}
-                <div className="w-16 h-16 bg-purple-50 text-purple-600 rounded-full flex items-center justify-center mb-6 border border-purple-100">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
+                <div className="bg-blue-900 p-6 text-white">
+                    <div className="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 className="text-xl font-black">{detalleDocente.nombre}</h3>
+                            <p className="text-blue-200 text-sm font-bold uppercase tracking-widest">{detalleDocente.fechaStr}</p>
+                        </div>
+                        <button onClick={() => setModalDetalleAbierto(false)} className="bg-blue-800 p-2 rounded-full hover:bg-blue-700">
+                            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                    </div>
                 </div>
 
-                <h3 className="text-xl font-black text-gray-900 mb-2">Justificar Asistencia</h3>
-                <p className="text-gray-500 text-sm mb-6">Por favor, escribe el motivo de la falta o retardo. Este registro se guardará para auditoría.</p>
+                <div className="p-8 overflow-y-auto bg-gray-50 flex-1">
+                    <h4 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-6">Línea de Tiempo del Día</h4>
+                    
+                    <div className="space-y-6 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-gray-300 before:to-transparent">
+                        
+                        {detalleDocente.cronograma.map((item, idx) => (
+                            <div key={idx} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+                                <div className={`flex items-center justify-center w-10 h-10 rounded-full border-4 border-white shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-sm z-10 ${item.tipo === 'clase' ? 'bg-emerald-500' : 'bg-gray-300'}`}>
+                                    {item.tipo === 'clase' ? (
+                                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" /></svg>
+                                    ) : (
+                                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                    )}
+                                </div>
+                                
+                                <div className={`w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-2xl border shadow-sm ${item.tipo === 'clase' ? 'bg-white border-emerald-100' : 'bg-gray-100/50 border-gray-200 border-dashed'}`}>
+                                    <div className="flex justify-between items-start mb-1">
+                                        <span className={`font-black text-sm ${item.tipo === 'clase' ? 'text-gray-900' : 'text-gray-500'}`}>{item.materia}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 mb-3 text-xs font-bold text-gray-400">
+                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                        {item.horario}
+                                    </div>
+                                    <span className={`inline-block px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-widest ${item.tipo === 'clase' ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-200 text-gray-500'}`}>
+                                        {item.status}
+                                    </span>
+                                </div>
+                            </div>
+                        ))}
 
-                {/* Input de texto elegante */}
-                <div className="mb-8">
-                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Motivo</label>
-                    <textarea 
-                        autoFocus
-                        rows="3"
-                        placeholder="Ej. Cita médica, Problema técnico, Retraso de transporte..."
-                        value={motivoTexto}
-                        onChange={(e) => setMotivoTexto(e.target.value)}
-                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-purple-100 focus:border-purple-500 outline-none text-sm font-medium text-gray-700 transition-all resize-none"
-                    ></textarea>
+                    </div>
                 </div>
-
-                {/* Botones */}
-                <div className="flex gap-3">
-                    <button 
-                        onClick={() => setModalAbierto(false)}
-                        className="flex-1 py-3 px-4 bg-gray-100 text-gray-600 font-bold rounded-xl hover:bg-gray-200 transition-colors"
-                    >
-                        Cancelar
-                    </button>
-                    <button 
-                        onClick={confirmarJustificacion}
-                        className="flex-1 py-3 px-4 bg-purple-600 text-white font-bold rounded-xl shadow-lg shadow-purple-600/30 hover:bg-purple-700 transition-colors transform active:scale-95"
-                    >
-                        Guardar
+                
+                <div className="p-6 bg-white border-t border-gray-100 flex justify-between items-center">
+                    <div>
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Resumen del Día</p>
+                        <p className="text-sm font-bold text-gray-900">Total a pagar: <span className="text-emerald-600">{detalleDocente.totalPagar} Hrs</span></p>
+                    </div>
+                    <button onClick={() => setModalDetalleAbierto(false)} className="px-6 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition-colors">
+                        Cerrar
                     </button>
                 </div>
             </div>

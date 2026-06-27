@@ -21,8 +21,9 @@ const directivoSchema = new mongoose.Schema({
         required: true, 
         default: 'admin' // Sin enums
     },
-    carrera: { 
-        type: String, 
+    // 👇 EL CAMBIO ESTÁ AQUÍ: Plural y tipo [String]
+    carreras: { 
+        type: [String], 
         enum: ['Radiología', 'Fisioterapia', 'Nutrición', 'Administración', 'Odontología', 'Enfermería', 'General'],
         required: true
     }
@@ -30,9 +31,7 @@ const directivoSchema = new mongoose.Schema({
     timestamps: true 
 });
 
-// 🔥 EL ENGAÑO MAESTRO 🔥
-// Le cambiamos el nombre a 'DirectivoNuevo' para que Node.js esté obligado a leerlo desde cero.
-// El tercer parámetro ('directivos') le dice que lo guarde en tu misma tabla de Mongo.
+
 const Directivo = mongoose.model('DirectivoNuevo', directivoSchema, 'directivos');
 
 export default Directivo;

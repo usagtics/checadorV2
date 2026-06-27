@@ -31,7 +31,11 @@ const ofertaAcademicaSchema = new mongoose.Schema({
         horaInicio: { type: String, required: true }, // Formato "09:00"
         horaFin: { type: String, required: true }     // Formato "10:00"
     }],
-    periodo: { type: String } // Ej: "Enero-Junio 2026"
+    periodo: { 
+        type: mongoose.Schema.Types.ObjectId, 
+        ref: 'Periodo',
+        required: true
+    }
 }, {
     timestamps: true
 });

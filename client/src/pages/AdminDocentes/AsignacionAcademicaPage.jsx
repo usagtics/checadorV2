@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useDocentes } from '../../context/DocenteContext';
 import { useAcademico } from '../../context/AcademicoContext';
 import { useDirectivo } from '../../context/DirectivoContext';
+// 1. IMPORTAMOS EL NUEVO CONTEXTO DE PERIODOS
+import { usePeriodos } from '../../context/PeriodoContext'; 
 import { useSearchParams } from 'react-router-dom';
 import MenuDocentes from '../../menu/MenuDocentes';
 
@@ -17,22 +19,28 @@ export default function AsignacionAcademicaPage() {
         getMaterias, 
         getGrupos, 
         createOfertaAcademica,
-        updateOfertaAcademica, // ✅ Traemos la función de actualizar
-        deleteOfertaAcademica, // ✅ Traemos la función de eliminar
+        updateOfertaAcademica,
+        deleteOfertaAcademica,
         errors: formErrors 
     } = useAcademico();
+
+    // 2. EXTRAEMOS LOS PERIODOS DEL CONTEXTO
+    const { periodos, getPeriodos } = usePeriodos();
 
     useEffect(() => {
         getDocentes();
         getMaterias();
         getGrupos();
+        getPeriodos(); // 3. CARGAMOS LOS PERIODOS AL MONTAR EL COMPONENTE
     }, []);
 
+    // 4. AÑADIMOS 'periodo' AL ESTADO INICIAL
     const [asignacion, setAsignacion] = useState({
         docente: docenteIdURL || '',
         materia: '',
         grupo: '',
-        turno: 'Matutino'
+        turno: 'Matutino',
+        periodo: '' // Nuevo campo
     });
 
     const [horarios, setHorarios] = useState([
@@ -41,8 +49,6 @@ export default function AsignacionAcademicaPage() {
 
     const [loading, setLoading] = useState(false);
     const [exitoMsg, setExitoMsg] = useState('');
-    
-    // ✅ NUEVO ESTADO: Para saber si estamos editando una clase existente
     const [editandoId, setEditandoId] = useState(null);
 
     useEffect(() => {
@@ -69,14 +75,14 @@ export default function AsignacionAcademicaPage() {
         setHorarios(horarios.filter((_, i) => i !== index));
     };
 
-    // ✅ FUNCIÓN PARA EDITAR: Carga los datos de la tabla al formulario de arriba
     const handleCargarEdicion = (oferta) => {
         setEditandoId(oferta._id);
         setAsignacion({
             docente: oferta.docente?._id || oferta.docente || asignacion.docente,
             materia: oferta.materia?._id || oferta.materia || '',
             grupo: oferta.grupo?._id || oferta.grupo || '',
-            turno: oferta.turno || 'Matutino'
+            turno: oferta.turno || 'Matutino',
+            periodo: oferta.periodo?._id || oferta.periodo || '' // 5. CARGAMOS EL PERIODO SI EXISTE
         });
 
         if (oferta.horarios && oferta.horarios.length > 0) {
@@ -89,27 +95,21 @@ export default function AsignacionAcademicaPage() {
         } else {
             setHorarios([{ diaSemana: 'Lunes', horaInicio: '', horaFin: '' }]);
         }
-
-        // Hace un scroll suave hacia arriba para que el usuario vea el formulario
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    // ✅ FUNCIÓN PARA CANCELAR EDICIÓN
     const handleCancelarEdicion = () => {
         setEditandoId(null);
-        setAsignacion(prev => ({ ...prev, materia: '', grupo: '', turno: 'Matutino' }));
+        setAsignacion(prev => ({ ...prev, materia: '', grupo: '', turno: 'Matutino', periodo: '' }));
         setHorarios([{ diaSemana: 'Lunes', horaInicio: '', horaFin: '' }]);
     };
 
-    // ✅ FUNCIÓN PARA ELIMINAR
     const handleEliminar = async (ofertaId) => {
         if (window.confirm("¿Estás seguro de que deseas eliminar esta clase asignada?")) {
             try {
                 if(deleteOfertaAcademica) {
                     await deleteOfertaAcademica(ofertaId);
-                    await getDocentes(); // Recarga la tabla
-                } else {
-                    console.error("No se encontró deleteOfertaAcademica en el Context");
+                    await getDocentes();
                 }
             } catch (error) {
                 console.error("Error al eliminar", error);
@@ -126,19 +126,17 @@ export default function AsignacionAcademicaPage() {
             const payloadFinal = { ...asignacion, horarios };
             
             if (editandoId) {
-                // MODO ACTUALIZAR
                 if(updateOfertaAcademica) {
                     await updateOfertaAcademica(editandoId, payloadFinal);
                     setExitoMsg('Asignación actualizada correctamente.');
                 }
             } else {
-                // MODO CREAR
                 await createOfertaAcademica(payloadFinal);
                 setExitoMsg('Asignación guardada correctamente.');
             }
             
             await getDocentes(); 
-            handleCancelarEdicion(); // Limpia el formulario y resetea estados
+            handleCancelarEdicion();
             
             setTimeout(() => setExitoMsg(''), 3000);
         } catch (error) {
@@ -174,7 +172,6 @@ export default function AsignacionAcademicaPage() {
                         </div>
                     </header>
 
-                    {/* El formulario cambia de borde si estamos editando */}
                     <div className={`bg-white rounded-[2.5rem] p-8 md:p-12 shadow-xl border transition-all ${editandoId ? 'border-amber-300 shadow-amber-100/50' : 'border-gray-100 shadow-gray-200/60'}`}>
                         
                         {exitoMsg && (
@@ -200,11 +197,11 @@ export default function AsignacionAcademicaPage() {
                                     <h2 className={`${editandoId ? 'text-amber-600' : 'text-blue-900'} font-black uppercase tracking-widest text-xs`}>Detalles de la Carga</h2>
                                 </div>
                                 
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
                                     <div className="space-y-2">
                                         <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Docente</label>
                                         <select name="docente" value={asignacion.docente} onChange={handleChange} required disabled={editandoId} className={`w-full border rounded-2xl px-5 py-4 text-gray-900 outline-none transition-all font-bold appearance-none ${editandoId ? 'bg-gray-100 border-gray-200 opacity-70 cursor-not-allowed' : 'bg-gray-50 border-gray-200 focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-900 cursor-pointer'}`}>
-                                            <option value="">Seleccione un docente...</option>
+                                            <option value="">Seleccione...</option>
                                             {docentes && docentes.map((d) => (
                                                 <option key={d._id} value={d._id}>{d.nombre} {d.apellidos}</option>
                                             ))}
@@ -213,7 +210,7 @@ export default function AsignacionAcademicaPage() {
                                     <div className="space-y-2">
                                         <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Materia</label>
                                         <select name="materia" value={asignacion.materia} onChange={handleChange} required className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-5 py-4 text-gray-900 focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-900 outline-none transition-all cursor-pointer font-bold appearance-none">
-                                            <option value="">Seleccione una materia...</option>
+                                            <option value="">Seleccione...</option>
                                             {materias && materias.map((m) => (
                                                 <option key={m._id} value={m._id}>{m.nombre}</option>
                                             ))}
@@ -222,7 +219,7 @@ export default function AsignacionAcademicaPage() {
                                     <div className="space-y-2">
                                         <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Grupo</label>
                                         <select name="grupo" value={asignacion.grupo} onChange={handleChange} required className="w-full bg-gray-50 border border-gray-200 rounded-2xl px-5 py-4 text-gray-900 focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-900 outline-none transition-all cursor-pointer font-bold appearance-none">
-                                            <option value="">Seleccione un grupo...</option>
+                                            <option value="">Seleccione...</option>
                                             {grupos && grupos.map((g) => (
                                                 <option key={g._id} value={g._id}>{g.nombre}</option>
                                             ))}
@@ -230,11 +227,30 @@ export default function AsignacionAcademicaPage() {
                                     </div>
                                     
                                     <div className="space-y-2">
-                                        <label className="block text-xs font-black text-emerald-600 uppercase tracking-widest ml-1">Turno de Pago</label>
+                                        <label className="block text-xs font-black text-emerald-600 uppercase tracking-widest ml-1">Turno</label>
                                         <select name="turno" value={asignacion.turno} onChange={handleChange} required className="w-full bg-emerald-50 border border-emerald-100 rounded-2xl px-5 py-4 text-emerald-900 font-black focus:bg-white focus:ring-2 focus:ring-emerald-200 outline-none transition-all cursor-pointer appearance-none shadow-sm">
                                             <option value="Matutino">Matutino</option>
                                             <option value="Sabatino">Sabatino</option>
                                             <option value="Virtual">Virtual</option>
+                                        </select>
+                                    </div>
+
+                                    {/* 6. NUEVO CAMPO: SELECTOR DE PERIODO */}
+                                    <div className="space-y-2">
+                                        <label className="block text-xs font-black text-purple-600 uppercase tracking-widest ml-1">Periodo</label>
+                                        <select 
+                                            name="periodo" 
+                                            value={asignacion.periodo} 
+                                            onChange={handleChange} 
+                                            required 
+                                            className="w-full bg-purple-50 border border-purple-100 rounded-2xl px-5 py-4 text-purple-900 font-black focus:bg-white focus:ring-2 focus:ring-purple-200 outline-none transition-all cursor-pointer appearance-none shadow-sm"
+                                        >
+                                            <option value="">Seleccione...</option>
+                                            {periodos && periodos.map((p) => (
+                                                <option key={p._id} value={p._id}>
+                                                    {p.nombre} {p.activo ? '⭐ (Activo)' : ''}
+                                                </option>
+                                            ))}
                                         </select>
                                     </div>
                                 </div>
@@ -309,7 +325,6 @@ export default function AsignacionAcademicaPage() {
                         </form>
                     </div>
 
-                    {/* ✅ CARGA ACTUAL DEL DOCENTE CON COLUMNA DE ACCIONES */}
                     {docenteSeleccionado && (
                         <div className="bg-indigo-900 rounded-[2.5rem] p-8 md:p-12 shadow-2xl border border-indigo-800 text-white animate-in slide-in-from-bottom-4 duration-500">
                             <div className="flex items-center justify-between mb-8">
@@ -327,7 +342,7 @@ export default function AsignacionAcademicaPage() {
                                         <thead>
                                             <tr className="bg-indigo-950 border-b border-indigo-800 sticky top-0">
                                                 <th className="px-6 py-4 text-[10px] uppercase tracking-[0.2em] text-indigo-300 font-black">Materia / Grupo</th>
-                                                <th className="px-6 py-4 text-[10px] uppercase tracking-[0.2em] text-indigo-300 font-black">Horario</th>
+                                                <th className="px-6 py-4 text-[10px] uppercase tracking-[0.2em] text-indigo-300 font-black">Horario / Periodo</th>
                                                 <th className="px-6 py-4 text-[10px] uppercase tracking-[0.2em] text-indigo-300 font-black text-center">Acciones</th>
                                             </tr>
                                         </thead>
@@ -351,6 +366,14 @@ export default function AsignacionAcademicaPage() {
                                                         
                                                         <td className="px-6 py-5">
                                                             <div className="space-y-1">
+                                                                {/* MOSTRAMOS EL PERIODO DE ESTA CLASE */}
+                                                                {oferta.periodo && (
+                                                                    <div className="mb-2">
+                                                                        <span className="bg-purple-900/40 text-purple-300 text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-md">
+                                                                            Periodo: {oferta.periodo?.nombre || 'Sin definir'}
+                                                                        </span>
+                                                                    </div>
+                                                                )}
                                                                 {oferta.horarios && oferta.horarios.map((h, hIdx) => (
                                                                     <div key={hIdx} className="flex gap-3 text-sm">
                                                                         <span className="font-bold text-indigo-200 w-20 capitalize">{h.dia || h.diaSemana}:</span>
@@ -362,7 +385,6 @@ export default function AsignacionAcademicaPage() {
 
                                                         <td className="px-6 py-5">
                                                             <div className="flex justify-center gap-2">
-                                                                {/* BOTÓN EDITAR */}
                                                                 <button 
                                                                     type="button"
                                                                     onClick={() => handleCargarEdicion(oferta)}
@@ -372,7 +394,6 @@ export default function AsignacionAcademicaPage() {
                                                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                                                                 </button>
                                                                 
-                                                                {/* BOTÓN ELIMINAR */}
                                                                 <button 
                                                                     type="button"
                                                                     onClick={() => handleEliminar(oferta._id)}
@@ -398,7 +419,6 @@ export default function AsignacionAcademicaPage() {
                             </div>
                         </div>
                     )}
-
                 </div>
             </div>
         </div>

@@ -5,8 +5,8 @@ import jwt from 'jsonwebtoken';
 import { TOKEN_SECRET } from '../config.js';
 
 export const registerDirectivo = async (req, res) => {
-    // 1. AGREGA 'role' AQUÍ (para que el código lea lo que mandas en Thunder Client)
-    const { email, password, username, carrera, role } = req.body; 
+    // 1. AHORA RECIBIMOS 'carreras' (EN PLURAL Y COMO ARREGLO)
+    const { email, password, username, carreras, role } = req.body; 
     
     try {
         const userFound = await Directivo.findOne({ email });
@@ -18,18 +18,17 @@ export const registerDirectivo = async (req, res) => {
             username,
             email,
             password: passwordHash,
-            carrera,
-            // 2. CAMBIA 'admin' POR role (así guardará lo que tú digas)
+            carreras, // 2. SE GUARDA EL ARREGLO EN MONGO
             role: role || 'admin'      
           });
 
         const userSaved = await newDirectivo.save();
         
-        // ... (el resto del código del token se queda igual)
+        // 3. GUARDAMOS EL ARREGLO EN EL TOKEN JWT
         const token = await createAccessToken({ 
             id: userSaved._id, 
             role: userSaved.role,
-            carrera: userSaved.carrera 
+            carreras: userSaved.carreras 
         });
 
         res.cookie('token', token);
@@ -37,13 +36,14 @@ export const registerDirectivo = async (req, res) => {
             id: userSaved._id,
             username: userSaved.username,
             email: userSaved.email,
-            carrera: userSaved.carrera,
+            carreras: userSaved.carreras, // Se devuelve plural
             role: userSaved.role
         });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 };
+
 export const loginDirectivo = async (req, res) => {
     const { email, password } = req.body;
     try {
@@ -53,10 +53,11 @@ export const loginDirectivo = async (req, res) => {
         const isMatch = await bcrypt.compare(password, userFound.password);
         if (!isMatch) return res.status(400).json(["Credenciales incorrectas"]);
 
+        // SE GUARDA EL ARREGLO EN EL TOKEN DURANTE EL LOGIN
         const token = await createAccessToken({ 
             id: userFound._id, 
             role: userFound.role, 
-            carrera: userFound.carrera 
+            carreras: userFound.carreras 
         });
 
         res.cookie('token', token);
@@ -64,33 +65,33 @@ export const loginDirectivo = async (req, res) => {
             id: userFound._id,
             username: userFound.username,
             email: userFound.email,
-            carrera: userFound.carrera,
+            carreras: userFound.carreras, // Se devuelve plural
             role: userFound.role
         });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 };
+
 export const getDirectivos = async (req, res) => {
   try {
-    // Buscamos todos menos el password por seguridad
     const directivos = await Directivo.find().select("-password");
     res.json(directivos);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
+
 export const deleteDirectivo = async (req, res) => {
   try {
     const deletedDirectivo = await Directivo.findByIdAndDelete(req.params.id);
     if (!deletedDirectivo) return res.status(404).json({ message: "No encontrado" });
-    res.sendStatus(204); // Todo bien, pero no hay contenido que devolver
+    res.sendStatus(204); 
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// 3. Cambiar el rol (de admin a super-admin o viceversa)
 export const updateDirectivoRole = async (req, res) => {
   try {
     const { role } = req.body;
@@ -104,6 +105,7 @@ export const updateDirectivoRole = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 export const verifyToken = async (req, res) => {
   const { token } = req.cookies;
   
@@ -120,7 +122,7 @@ export const verifyToken = async (req, res) => {
       username: userFound.username,
       email: userFound.email,
       role: userFound.role,
-      carrera: userFound.carrera
+      carreras: userFound.carreras // SE DEVUELVE PLURAL AL FRONTEND
     });
   });
 };

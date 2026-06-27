@@ -1,20 +1,25 @@
 import React, { useEffect, useState } from 'react';
 import { useDocentes } from '../../context/DocenteContext';
 import { useDirectivo } from '../../context/DirectivoContext';
+import { usePeriodos } from '../../context/PeriodoContext'; 
 import { Link } from 'react-router-dom';
 import MenuDocentes from '../../menu/MenuDocentes'; 
 
 export default function DocentesListPage() {
   const { getDocentes, docentes, loading } = useDocentes();
   const { user } = useDirectivo();
+  const { periodos, getPeriodos } = usePeriodos(); 
   
   const [showQRModal, setShowQRModal] = useState(false);
-  // ✅ NUEVO: Estado para controlar el Modal del Horario
   const [showHorarioModal, setShowHorarioModal] = useState(false);
   const [selectedDocente, setSelectedDocente] = useState(null);
 
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedPeriodo, setSelectedPeriodo] = useState("");
+
   useEffect(() => {
     getDocentes();
+    getPeriodos(); 
   }, []);
 
   const handleViewQR = (docente) => {
@@ -22,7 +27,6 @@ export default function DocentesListPage() {
     setShowQRModal(true);
   };
 
-  // ✅ NUEVO: Función para abrir el horario
   const handleViewHorario = (docente) => {
     setSelectedDocente(docente);
     setShowHorarioModal(true);
@@ -35,6 +39,32 @@ export default function DocentesListPage() {
     link.download = `QR_${selectedDocente.nombre}_${selectedDocente.numeroEmpleado}.png`;
     link.click();
   };
+
+  const docentesFiltrados = docentes.filter(docente => {
+    const matchesSearch = 
+      docente.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      docente.apellidos.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      docente.numeroEmpleado.toLowerCase().includes(searchTerm.toLowerCase());
+
+    let matchesPeriodo = true;
+    if (selectedPeriodo !== "") {
+        matchesPeriodo = docente.ofertaAcademica?.some(
+            oferta => oferta.periodo && oferta.periodo._id === selectedPeriodo
+        );
+    }
+
+    // 👇 AQUÍ AJUSTAMOS EL FILTRO LOCAL PARA EL FRONTEND 👇
+    // Opcional, pero muy recomendado: Si el usuario es directivo, que la lista de docentes
+    // también se filtre en el frontend para mostrar SOLO a los que den clases en sus carreras.
+    let matchesCarrera = true;
+    if (user?.role !== 'super-admin' && user?.carreras && user.carreras.length > 0) {
+        matchesCarrera = docente.ofertaAcademica?.some(
+            oferta => oferta.grupo && user.carreras.includes(oferta.grupo.programa)
+        );
+    }
+
+    return matchesSearch && matchesPeriodo && matchesCarrera;
+  });
 
   if (loading) return (
     <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -55,14 +85,15 @@ export default function DocentesListPage() {
         <div className="max-w-7xl mx-auto">
           
           {/* --- ENCABEZADO --- */}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
             <div>
               <div className="flex items-center gap-3 mb-1">
                 <div className="h-8 w-1.5 bg-blue-900 rounded-full"></div>
                 <h1 className="text-4xl font-black text-gray-900 tracking-tighter">Plantilla de Docentes</h1>
               </div>
               <p className="text-gray-500 font-medium ml-4">
-                Carrera de <span className="font-bold text-blue-900 bg-blue-50 px-3 py-1 rounded-lg border border-blue-100">{user?.carrera || 'Administración'}</span>
+                {/* 👇 AQUÍ ESTÁ EL CAMBIO PARA DIBUJAR LAS CARRERAS EN PLURAL 👇 */}
+                Carrera de <span className="font-bold text-blue-900 bg-blue-50 px-3 py-1 rounded-lg border border-blue-100">{user?.carreras?.join(', ') || 'Administración'}</span>
               </p>
             </div>
             
@@ -72,6 +103,39 @@ export default function DocentesListPage() {
             >
               NUEVO DOCENTE
             </Link>
+          </div>
+
+          {/* --- BARRA DE BÚSQUEDA Y FILTROS --- */}
+          <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 mb-8 flex flex-col md:flex-row gap-4">
+            <div className="flex-1 relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <svg className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+                    </svg>
+                </div>
+                <input
+                    type="text"
+                    placeholder="Buscar por nombre, apellido o matrícula..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-11 pr-4 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-100 focus:border-blue-900 outline-none transition-all font-medium text-sm"
+                />
+            </div>
+
+            <div className="w-full md:w-64">
+                <select 
+                    value={selectedPeriodo}
+                    onChange={(e) => setSelectedPeriodo(e.target.value)}
+                    className="w-full px-4 py-4 bg-purple-50 border border-purple-100 text-purple-900 rounded-xl focus:ring-2 focus:ring-purple-200 outline-none transition-all font-bold text-sm cursor-pointer appearance-none"
+                >
+                    <option value="">Todos los periodos</option>
+                    {periodos && periodos.map((p) => (
+                        <option key={p._id} value={p._id}>
+                            {p.nombre} {p.activo ? '⭐' : ''}
+                        </option>
+                    ))}
+                </select>
+            </div>
           </div>
 
           {/* --- TABLA --- */}
@@ -87,89 +151,93 @@ export default function DocentesListPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {docentes.map((docente) => (
-                    <tr key={docente._id} className="hover:bg-blue-50/30 transition-colors group">
-                      <td className="px-8 py-6">
-                        <div className="flex items-center gap-4">
-                          <div className="w-11 h-11 rounded-2xl bg-blue-100 text-blue-900 flex items-center justify-center font-black border border-blue-200">
-                            {docente.nombre ? docente.nombre.charAt(0).toUpperCase() : 'U'}
-                          </div>
-                          <div>
-                            <span className="font-bold text-gray-900 block leading-tight">{docente.nombre} {docente.apellidos}</span>
-                            <span className="text-[10px] text-gray-400 font-bold tracking-widest uppercase">Matrícula: {docente.numeroEmpleado}</span>
-                          </div>
-                        </div>
-                      </td>
+                  {docentesFiltrados.length > 0 ? (
+                      docentesFiltrados.map((docente) => (
+                        <tr key={docente._id} className="hover:bg-blue-50/30 transition-colors group">
+                          <td className="px-8 py-6">
+                            <div className="flex items-center gap-4">
+                              <div className="w-11 h-11 rounded-2xl bg-blue-100 text-blue-900 flex items-center justify-center font-black border border-blue-200">
+                                {docente.nombre ? docente.nombre.charAt(0).toUpperCase() : 'U'}
+                              </div>
+                              <div>
+                                <span className="font-bold text-gray-900 block leading-tight">{docente.nombre} {docente.apellidos}</span>
+                                <span className="text-[10px] text-gray-400 font-bold tracking-widest uppercase">Matrícula: {docente.numeroEmpleado}</span>
+                              </div>
+                            </div>
+                          </td>
 
-                      <td className="px-8 py-6">
-                        <span className="text-sm text-gray-700 font-bold block">{docente.email}</span>
-                        <span className="text-xs text-gray-400 font-medium italic">{docente.telefono || 'Sin teléfono'}</span>
-                      </td>
+                          <td className="px-8 py-6">
+                            <span className="text-sm text-gray-700 font-bold block">{docente.email}</span>
+                            <span className="text-xs text-gray-400 font-medium italic">{docente.telefono || 'Sin teléfono'}</span>
+                          </td>
 
-                      <td className="px-8 py-6">
-                        <div className="flex flex-wrap gap-2">
-                          {docente.materias && docente.materias.length > 0 ? (
-                            docente.materias.map((m, i) => (
-                              <span key={i} className="inline-block bg-blue-50 text-blue-900 text-[9px] px-2 py-1 rounded-lg font-black uppercase">
-                                {typeof m === 'string' ? m : m.nombre}
-                              </span>
-                            ))
-                          ) : (
-                            <span className="text-gray-300 text-[10px] font-black uppercase">Sin carga</span>
-                          )}
-                        </div>
-                      </td>
+                          <td className="px-8 py-6">
+                            <div className="flex flex-wrap gap-2">
+                              {docente.materias && docente.materias.length > 0 ? (
+                                docente.materias.map((m, i) => (
+                                  <span key={i} className="inline-block bg-blue-50 text-blue-900 text-[9px] px-2 py-1 rounded-lg font-black uppercase">
+                                    {typeof m === 'string' ? m : m.nombre}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="text-gray-300 text-[10px] font-black uppercase">Sin carga</span>
+                              )}
+                            </div>
+                          </td>
 
-                      <td className="px-8 py-6 text-center">
-                        <div className="flex justify-center gap-2">
-                          
-                          {/* ✅ NUEVO: Botón Ver Horario (Calendario) */}
-                          <button 
-                            onClick={() => handleViewHorario(docente)}
-                            className="p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-xl transition-all border border-indigo-100 shadow-sm"
-                            title="Ver Horario"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                          </button>
+                          <td className="px-8 py-6 text-center">
+                            <div className="flex justify-center gap-2">
+                              
+                              <button 
+                                onClick={() => handleViewHorario(docente)}
+                                className="p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-xl transition-all border border-indigo-100 shadow-sm"
+                                title="Ver Horario"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                              </button>
 
-                          {/* Botón Ver QR */}
-                          <button 
-                            onClick={() => handleViewQR(docente)}
-                            className="p-2 bg-blue-50 text-blue-900 hover:bg-blue-900 hover:text-white rounded-xl transition-all border border-blue-100 shadow-sm"
-                            title="Ver Código QR"
-                          >
-                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m0 11v1m5-16v1m0 11v1M4 8h1m11 0h1M4 12h1m11 0h1M4 16h1m11 0h1m-4-8H4m4 8h8m-4-4h.01M9 4h6m-6 16h6" />
-                             </svg>
-                          </button>
-                          
-                          {/* Botón Asignar Materia */}
-                          <Link 
-                            to={`/admin/asignacion?docente=${docente._id}`} 
-                            className="p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded-xl transition-all border border-emerald-100 shadow-sm" 
-                            title="Asignar Materia"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                            </svg>
-                          </Link>
+                              <button 
+                                onClick={() => handleViewQR(docente)}
+                                className="p-2 bg-blue-50 text-blue-900 hover:bg-blue-900 hover:text-white rounded-xl transition-all border border-blue-100 shadow-sm"
+                                title="Ver Código QR"
+                              >
+                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m0 11v1m5-16v1m0 11v1M4 8h1m11 0h1M4 12h1m11 0h1M4 16h1m11 0h1m-4-8H4m4 8h8m-4-4h.01M9 4h6m-6 16h6" />
+                                 </svg>
+                              </button>
+                              
+                              <Link 
+                                to={`/admin/asignacion?docente=${docente._id}`} 
+                                className="p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded-xl transition-all border border-emerald-100 shadow-sm" 
+                                title="Asignar Materia"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                </svg>
+                              </Link>
 
-                          {/* Botón Editar Docente */}
-                          <Link 
-                            to={`/admin/registro-docente/${docente._id}`}
-                            className="p-2 bg-gray-50 text-gray-600 hover:bg-gray-800 hover:text-white rounded-xl transition-all border border-gray-200 shadow-sm" 
-                            title="Editar Docente"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                          </Link>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                              <Link 
+                                to={`/admin/registro-docente/${docente._id}`}
+                                className="p-2 bg-gray-50 text-gray-600 hover:bg-gray-800 hover:text-white rounded-xl transition-all border border-gray-200 shadow-sm" 
+                                title="Editar Docente"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                              </Link>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                  ) : (
+                      <tr>
+                          <td colSpan="4" className="px-8 py-16 text-center text-gray-400 font-bold text-sm">
+                              No se encontraron docentes con los filtros aplicados.
+                          </td>
+                      </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -204,12 +272,11 @@ export default function DocentesListPage() {
         </div>
       )}
 
-      {/* ✅ NUEVO: MODAL PARA MOSTRAR EL HORARIO */}
+      {/* --- MODAL PARA MOSTRAR EL HORARIO --- */}
       {showHorarioModal && selectedDocente && (
         <div className="fixed inset-0 bg-blue-900/40 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
           <div className="bg-white rounded-[3rem] p-8 md:p-10 max-w-2xl w-full shadow-2xl animate-in fade-in zoom-in duration-300">
             
-            {/* Cabecera del Modal */}
             <div className="flex justify-between items-start mb-6">
               <div>
                 <h2 className="text-2xl font-black text-gray-900 mb-1">Horario Asignado</h2>
@@ -224,19 +291,17 @@ export default function DocentesListPage() {
               </button>
             </div>
 
-            {/* Tabla del Horario */}
             <div className="bg-gray-50 rounded-[2rem] border border-gray-100 overflow-hidden mb-6">
               <div className="overflow-x-auto max-h-[50vh]">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-gray-100/50 border-b border-gray-200 sticky top-0">
                       <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-gray-500 font-black">Materia y Grupo</th>
-                      <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-gray-500 font-black">Día</th>
+                      <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-gray-500 font-black">Periodo</th>
                       <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-gray-500 font-black">Horario</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 bg-white">
-                    {/* Renderizamos el horario leyendo el arreglo 'ofertaAcademica' (o similar) del docente */}
                     {selectedDocente.ofertaAcademica && selectedDocente.ofertaAcademica.length > 0 ? (
                       selectedDocente.ofertaAcademica.map((oferta, idx) => (
                         <React.Fragment key={idx}>
@@ -251,10 +316,11 @@ export default function DocentesListPage() {
                                     Grupo: {oferta.grupo?.nombre || 'General'}
                                   </span>
                                 </td>
-                                <td className="px-6 py-4 font-bold text-gray-700 capitalize">
-                                  {horario.dia}
+                                <td className="px-6 py-4 font-bold text-purple-700 text-[10px] uppercase tracking-widest">
+                                    {oferta.periodo?.nombre || 'Sin definir'}
                                 </td>
                                 <td className="px-6 py-4 text-indigo-600 font-black text-sm">
+                                  <span className="capitalize text-gray-700 mr-2">{horario.dia || horario.diaSemana}:</span>
                                   {horario.horaInicio} - {horario.horaFin}
                                 </td>
                               </tr>

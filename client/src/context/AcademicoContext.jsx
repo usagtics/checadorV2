@@ -66,16 +66,29 @@ export function AcademicoProvider({ children }) {
     }
   };
 
-  const createOfertaAcademica = async (asignacionData) => {
+const createOfertaAcademica = async (asignacionData) => {
     try {
-      const res = await createOfertaAcademicaRequest(asignacionData);
+      // 1. Limpieza preventiva antes de enviar al backend
+      const dataLimpia = { ...asignacionData };
+      
+      // Si el periodo es cadena vacía, lo eliminamos para que el backend 
+      // detecte que es 'undefined' y aplique la lógica del periodo activo
+      if (!dataLimpia.periodo || dataLimpia.periodo === "") {
+        delete dataLimpia.periodo;
+      }
+
+      const res = await createOfertaAcademicaRequest(dataLimpia);
+      
+      // 2. Opcional: Actualizar el estado local si es necesario
+      // setOfertas([...ofertas, res.data]); 
+      
       return res.data; 
     } catch (error) {
+      setErrors(error.response?.data?.message || ["Error al crear asignación"]);
       throw error; 
     }
   };
 
-  // ✅ NUEVO: Función para actualizar
   const updateOfertaAcademica = async (id, asignacionData) => {
     try {
       const res = await updateOfertaAcademicaRequest(id, asignacionData);
