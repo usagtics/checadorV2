@@ -9,7 +9,7 @@ import {
 } from '../controllers/directivoAuth.controller.js';
 
 import { validateSchema } from '../middlewares/validator.middleware.js';
-import { authRequired } from '../middlewares/validatetoken.js'; 
+import { authRequired } from '../middlewares/validateToken.js'; 
 import { isSuperAdmin } from '../middlewares/validateRole.js';
 import { directivoRegisterSchema, directivoLoginSchema } from '../schemas/directivoAuth.schema.js';
 

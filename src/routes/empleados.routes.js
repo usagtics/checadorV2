@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { validateSchema } from "../middlewares/validator.middleware.js";
-import { authRequired } from "../middlewares/validatetoken.js"; 
+import { authRequired } from "../middlewares/validateToken.js"; 
 import { createEmployeeSchema, updateEmployeeSchema } from "../schemas/empleados.schema.js"; 
 
 import {
