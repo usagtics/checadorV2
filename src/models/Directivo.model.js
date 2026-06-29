@@ -19,18 +19,16 @@ const directivoSchema = new mongoose.Schema({
     role: { 
         type: String, 
         required: true, 
-        default: 'admin' // Sin enums
+        default: 'admin' 
     },
-    // 👇 EL CAMBIO ESTÁ AQUÍ: Plural y tipo [String]
-    carreras: { 
-        type: [String], 
-        enum: ['Radiología', 'Fisioterapia', 'Nutrición', 'Administración', 'Odontología', 'Enfermería', 'General'],
-        required: true
-    }
+   
+    carreras: [{ 
+        type: mongoose.Schema.Types.ObjectId, 
+        ref: 'Carrera' 
+    }]
 }, { 
     timestamps: true 
 });
-
 
 const Directivo = mongoose.model('DirectivoNuevo', directivoSchema, 'directivos');
 

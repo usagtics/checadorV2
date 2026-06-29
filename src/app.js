@@ -26,6 +26,7 @@ import periodosRoutes from './routes/periodos.routes.js';
 
 import teamsRoutes from './routes/teams.routes.js';
 import { obtenerToken } from './services/teamsService.js';
+import carreraRoutes from './routes/carrera.routes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -81,6 +82,7 @@ app.use('/api', gruposRoutes);
 app.use('/api', ofertaAcademicaRoutes);
 app.use('/api', checadorDocenteRoutes);
 app.use('/api', periodosRoutes); 
+app.use("/api", carreraRoutes);
 
 app.use('/api', teamsRoutes);
 

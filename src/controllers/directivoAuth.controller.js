@@ -5,7 +5,6 @@ import jwt from 'jsonwebtoken';
 import { TOKEN_SECRET } from '../config.js';
 
 export const registerDirectivo = async (req, res) => {
-    // 1. AHORA RECIBIMOS 'carreras' (EN PLURAL Y COMO ARREGLO)
     const { email, password, username, carreras, role } = req.body; 
     
     try {
@@ -18,13 +17,13 @@ export const registerDirectivo = async (req, res) => {
             username,
             email,
             password: passwordHash,
-            carreras, // 2. SE GUARDA EL ARREGLO EN MONGO
+            carreras, 
             role: role || 'admin'      
           });
 
         const userSaved = await newDirectivo.save();
         
-        // 3. GUARDAMOS EL ARREGLO EN EL TOKEN JWT
+      
         const token = await createAccessToken({ 
             id: userSaved._id, 
             role: userSaved.role,
@@ -36,7 +35,7 @@ export const registerDirectivo = async (req, res) => {
             id: userSaved._id,
             username: userSaved.username,
             email: userSaved.email,
-            carreras: userSaved.carreras, // Se devuelve plural
+            carreras: userSaved.carreras, 
             role: userSaved.role
         });
     } catch (error) {
@@ -53,7 +52,6 @@ export const loginDirectivo = async (req, res) => {
         const isMatch = await bcrypt.compare(password, userFound.password);
         if (!isMatch) return res.status(400).json(["Credenciales incorrectas"]);
 
-        // SE GUARDA EL ARREGLO EN EL TOKEN DURANTE EL LOGIN
         const token = await createAccessToken({ 
             id: userFound._id, 
             role: userFound.role, 
@@ -65,7 +63,7 @@ export const loginDirectivo = async (req, res) => {
             id: userFound._id,
             username: userFound.username,
             email: userFound.email,
-            carreras: userFound.carreras, // Se devuelve plural
+            carreras: userFound.carreras,
             role: userFound.role
         });
     } catch (error) {
