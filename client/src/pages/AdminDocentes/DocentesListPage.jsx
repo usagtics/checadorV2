@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useDocentes } from '../../context/DocenteContext';
 import { useDirectivo } from '../../context/DirectivoContext';
 import { usePeriodos } from '../../context/PeriodoContext'; 
@@ -53,9 +53,6 @@ export default function DocentesListPage() {
         );
     }
 
-    // 👇 AQUÍ AJUSTAMOS EL FILTRO LOCAL PARA EL FRONTEND 👇
-    // Opcional, pero muy recomendado: Si el usuario es directivo, que la lista de docentes
-    // también se filtre en el frontend para mostrar SOLO a los que den clases en sus carreras.
     let matchesCarrera = true;
     if (user?.role !== 'super-admin' && user?.carreras && user.carreras.length > 0) {
         matchesCarrera = docente.ofertaAcademica?.some(
@@ -65,6 +62,43 @@ export default function DocentesListPage() {
 
     return matchesSearch && matchesPeriodo && matchesCarrera;
   });
+
+  // 👇 NUEVA LÓGICA: Procesar y agrupar el horario por día para el modal 👇
+  const horarioAgrupado = useMemo(() => {
+    if (!selectedDocente || !selectedDocente.ofertaAcademica) return [];
+
+    const diasOrden = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+    const agrupado = {};
+
+    selectedDocente.ofertaAcademica.forEach(oferta => {
+      if (oferta.horarios && oferta.horarios.length > 0) {
+        oferta.horarios.forEach(horario => {
+          // Normalizar el nombre del día
+          const diaRaw = horario.dia || horario.diaSemana;
+          const dia = diaRaw.charAt(0).toUpperCase() + diaRaw.slice(1).toLowerCase();
+
+          if (!agrupado[dia]) agrupado[dia] = [];
+          
+          agrupado[dia].push({
+            materia: oferta.materia?.nombre || 'Materia sin nombre',
+            grupo: oferta.grupo?.nombre || 'General',
+            periodo: oferta.periodo?.nombre || 'Sin definir',
+            horaInicio: horario.horaInicio,
+            horaFin: horario.horaFin
+          });
+        });
+      }
+    });
+
+    // Convertir el objeto a un arreglo ordenado por día y luego por hora de inicio
+    return Object.keys(agrupado)
+      .sort((a, b) => diasOrden.indexOf(a) - diasOrden.indexOf(b))
+      .map(dia => ({
+        dia,
+        clases: agrupado[dia].sort((a, b) => a.horaInicio.localeCompare(b.horaInicio))
+      }));
+  }, [selectedDocente]);
+
 
   if (loading) return (
     <div className="flex items-center justify-center min-h-screen bg-gray-50">
@@ -77,14 +111,11 @@ export default function DocentesListPage() {
   return (
     <div className="flex h-screen bg-gray-50 font-sans selection:bg-blue-900/10 overflow-hidden">
       
-      {/* --- MENÚ LATERAL --- */}
       <MenuDocentes />
 
-      {/* --- CONTENIDO PRINCIPAL --- */}
       <div className="flex-1 overflow-y-auto p-4 md:p-10">
         <div className="max-w-7xl mx-auto">
           
-          {/* --- ENCABEZADO --- */}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
             <div>
               <div className="flex items-center gap-3 mb-1">
@@ -92,7 +123,6 @@ export default function DocentesListPage() {
                 <h1 className="text-4xl font-black text-gray-900 tracking-tighter">Plantilla de Docentes</h1>
               </div>
               <p className="text-gray-500 font-medium ml-4">
-                {/* 👇 AQUÍ ESTÁ EL CAMBIO PARA DIBUJAR LAS CARRERAS EN PLURAL 👇 */}
                 Carrera de <span className="font-bold text-blue-900 bg-blue-50 px-3 py-1 rounded-lg border border-blue-100">{user?.carreras?.join(', ') || 'Administración'}</span>
               </p>
             </div>
@@ -105,7 +135,6 @@ export default function DocentesListPage() {
             </Link>
           </div>
 
-          {/* --- BARRA DE BÚSQUEDA Y FILTROS --- */}
           <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 mb-8 flex flex-col md:flex-row gap-4">
             <div className="flex-1 relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -138,7 +167,6 @@ export default function DocentesListPage() {
             </div>
           </div>
 
-          {/* --- TABLA --- */}
           <div className="bg-white rounded-[2rem] shadow-xl shadow-gray-200/60 overflow-hidden border border-gray-100 mb-10">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
@@ -246,7 +274,6 @@ export default function DocentesListPage() {
         </div>
       </div>
 
-      {/* --- MODAL PARA MOSTRAR EL QR --- */}
       {showQRModal && selectedDocente && (
         <div className="fixed inset-0 bg-blue-900/40 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
           <div className="bg-white rounded-[3rem] p-10 max-w-sm w-full text-center shadow-2xl animate-in fade-in zoom-in duration-300">
@@ -272,16 +299,16 @@ export default function DocentesListPage() {
         </div>
       )}
 
-      {/* --- MODAL PARA MOSTRAR EL HORARIO --- */}
+      {/* 👇 NUEVO DISEÑO DEL MODAL DE HORARIO 👇 */}
       {showHorarioModal && selectedDocente && (
         <div className="fixed inset-0 bg-blue-900/40 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-          <div className="bg-white rounded-[3rem] p-8 md:p-10 max-w-2xl w-full shadow-2xl animate-in fade-in zoom-in duration-300">
+          <div className="bg-white rounded-[3rem] p-8 md:p-10 max-w-3xl w-full shadow-2xl animate-in fade-in zoom-in duration-300 flex flex-col max-h-[90vh]">
             
-            <div className="flex justify-between items-start mb-6">
+            <div className="flex justify-between items-start mb-6 shrink-0">
               <div>
-                <h2 className="text-2xl font-black text-gray-900 mb-1">Horario Asignado</h2>
+                <h2 className="text-2xl font-black text-gray-900 mb-1">Agenda de Clases</h2>
                 <p className="text-indigo-600 font-bold text-[10px] uppercase tracking-widest">
-                  Prof. {selectedDocente.nombre} {selectedDocente.apellidos}
+                  Docente {selectedDocente.nombre} {selectedDocente.apellidos}
                 </p>
               </div>
               <button onClick={() => setShowHorarioModal(false)} className="w-10 h-10 bg-gray-50 text-gray-400 rounded-full flex items-center justify-center hover:bg-gray-100 hover:text-gray-600 transition-colors">
@@ -291,61 +318,61 @@ export default function DocentesListPage() {
               </button>
             </div>
 
-            <div className="bg-gray-50 rounded-[2rem] border border-gray-100 overflow-hidden mb-6">
-              <div className="overflow-x-auto max-h-[50vh]">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-gray-100/50 border-b border-gray-200 sticky top-0">
-                      <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-gray-500 font-black">Materia y Grupo</th>
-                      <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-gray-500 font-black">Periodo</th>
-                      <th className="px-6 py-4 text-[10px] uppercase tracking-widest text-gray-500 font-black">Horario</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 bg-white">
-                    {selectedDocente.ofertaAcademica && selectedDocente.ofertaAcademica.length > 0 ? (
-                      selectedDocente.ofertaAcademica.map((oferta, idx) => (
-                        <React.Fragment key={idx}>
-                          {oferta.horarios && oferta.horarios.length > 0 ? (
-                            oferta.horarios.map((horario, hIdx) => (
-                              <tr key={`${idx}-${hIdx}`} className="hover:bg-indigo-50/30 transition-colors">
-                                <td className="px-6 py-4">
-                                  <span className="font-bold text-gray-900 block leading-tight">
-                                    {oferta.materia?.nombre || 'Materia sin nombre'}
-                                  </span>
-                                  <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest block mt-1">
-                                    Grupo: {oferta.grupo?.nombre || 'General'}
-                                  </span>
-                                </td>
-                                <td className="px-6 py-4 font-bold text-purple-700 text-[10px] uppercase tracking-widest">
-                                    {oferta.periodo?.nombre || 'Sin definir'}
-                                </td>
-                                <td className="px-6 py-4 text-indigo-600 font-black text-sm">
-                                  <span className="capitalize text-gray-700 mr-2">{horario.dia || horario.diaSemana}:</span>
-                                  {horario.horaInicio} - {horario.horaFin}
-                                </td>
-                              </tr>
-                            ))
-                          ) : null}
-                        </React.Fragment>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan="3" className="px-6 py-12 text-center text-gray-400 font-bold text-sm">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 mx-auto mb-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          Aún no se le han asignado horas de clase a este docente.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+            <div className="overflow-y-auto flex-1 pr-2 space-y-6 custom-scrollbar mb-6">
+              {horarioAgrupado.length > 0 ? (
+                horarioAgrupado.map((diaInfo, idx) => (
+                  <div key={idx} className="bg-gray-50 rounded-[2rem] border border-gray-100 p-6 relative overflow-hidden">
+                    {/* Decoración visual para el día */}
+                    <div className="absolute top-0 left-0 w-2 h-full bg-indigo-500 rounded-l-[2rem]"></div>
+                    
+                    <h3 className="text-lg font-black text-indigo-900 mb-4 ml-4 flex items-center gap-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      {diaInfo.dia}
+                    </h3>
+
+                    <div className="space-y-3 ml-4">
+                      {diaInfo.clases.map((clase, cIdx) => (
+                        <div key={cIdx} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                          <div>
+                            <p className="font-bold text-gray-900 leading-tight">{clase.materia}</p>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">
+                              Grupo: <span className="text-indigo-600">{clase.grupo}</span> • {clase.periodo}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2 bg-indigo-50 text-indigo-700 px-4 py-2 rounded-xl border border-indigo-100 w-fit">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span className="font-black text-sm">{clase.horaInicio} - {clase.horaFin}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <h4 className="text-gray-900 font-black text-lg mb-1">Sin Agenda</h4>
+                  <p className="text-gray-500 font-medium text-sm max-w-xs mx-auto">
+                    Aún no se le han asignado horas de clase a este docente en el sistema.
+                  </p>
+                </div>
+              )}
             </div>
 
-            <button onClick={() => setShowHorarioModal(false)} className="w-full bg-indigo-600 text-white font-black py-4 rounded-2xl flex items-center justify-center hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20">
-              CERRAR HORARIO
-            </button>
+            <div className="shrink-0 pt-2 border-t border-gray-100 mt-2">
+              <button onClick={() => setShowHorarioModal(false)} className="w-full bg-indigo-600 text-white font-black py-4 rounded-2xl flex items-center justify-center hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20">
+                CERRAR AGENDA
+              </button>
+            </div>
+
           </div>
         </div>
       )}

@@ -8,12 +8,11 @@ import "react-toastify/dist/ReactToastify.css";
 import Swal from "sweetalert2";
 import { FaRegClock } from "react-icons/fa";
 
-// Interfaces actualizadas
 interface Checada {
   _id: string;
   hora: Date;
   tipo: string;
-  status?: string; // Nuevo campo
+  status?: string; 
   tarde?: boolean;
   empleado: {
     tipoHorario: {
@@ -72,7 +71,6 @@ const ChecadaPage: React.FC = () => {
       } catch (error: any) {
         console.error("Error de cámara:", error);
 
-        // CASO 1: El usuario dio click en "Bloquear" o el navegador no tiene permiso
         if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
              Swal.fire({
                 icon: 'warning',

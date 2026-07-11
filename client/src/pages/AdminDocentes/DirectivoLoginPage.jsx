@@ -10,50 +10,43 @@ import { useDocentes } from "../../context/DocenteContext";
 import logo from "../../assets/logo.png"; 
 
 export function DirectivoLoginPage() {
-  // ✅ ESTADO PARA EL SWITCH (Por defecto entra en modo Docente)
   const [isDocente, setIsDocente] = useState(true);
 
   const { register, handleSubmit, reset, formState: { errors: formErrors } } = useForm();
   const navigate = useNavigate();
 
-  // Extraemos las herramientas de Directivos
   const { signinDirectivo, isAuthenticated: isAuthDir, errors: errDir } = useDirectivo();
-  // Extraemos las herramientas de Docentes
   const { signinDocente, isAuthenticated: isAuthDoc, errors: errDoc } = useDocentes();
 
-  // 👇 REDIRECCIÓN INTELIGENTE
   useEffect(() => {
     if (isAuthDoc) {
-      navigate("/docente/inicio"); // Si es profe, a su panel
+      navigate("/docente/inicio"); 
     }
     if (isAuthDir) {
-      navigate("/admin"); // Si es directivo, al panel admin
+      navigate("/admin"); 
     }
   }, [isAuthDoc, isAuthDir, navigate]);
 
-  // 👇 SUBMIT CON CHISMOSO (Console.log) PARA VER QUE NO FALLE
   const onSubmit = handleSubmit((data) => {
-    console.log("Enviando datos:", data); // Para ver si el botón sí funciona
+    console.log("Enviando datos:", data); 
     if (isDocente) {
-      signinDocente(data); // Usa { username, password }
+      signinDocente(data); 
     } else {
-      signinDirectivo(data); // Usa { email, password }
+      signinDirectivo(data); 
     }
   });
 
-  // Función para cambiar de lado y limpiar errores
   const handleSwitch = (modoDocente) => {
     setIsDocente(modoDocente);
-    reset(); // Limpiamos el formulario para que no se cruce el email con el username
+    reset(); 
   };
 
-  // Elegimos qué errores mostrar
   const currentErrors = isDocente ? errDoc : errDir;
 
   return (
     <div className="flex min-h-screen bg-gray-50 font-sans overflow-hidden selection:bg-blue-900/10 selection:text-blue-900">
       
-      {/* --- LADO IZQUIERDO: FORMULARIO BLANCO (60%) --- */}
+   
       <div className="w-full lg:w-[60%] flex items-center justify-center p-8 sm:p-12 relative z-10 bg-gray-50">
         
         <div className="w-full max-w-md bg-white p-10 sm:p-12 rounded-[2rem] shadow-xl shadow-gray-200/50 border border-gray-100">
@@ -65,7 +58,6 @@ export function DirectivoLoginPage() {
             <p className="text-gray-500 font-medium text-sm">Selecciona tu perfil de acceso</p>
           </div>
 
-          {/* 🔘 EL SWITCH (BOTONES PARA CAMBIAR) 🔘 */}
           <div className="flex bg-gray-50 p-1.5 rounded-2xl mb-8 border border-gray-100">
             <button
               type="button"
@@ -83,7 +75,6 @@ export function DirectivoLoginPage() {
             </button>
           </div>
 
-          {/* Alertas de error del Backend */}
           {currentErrors?.map((error, i) => (
             <div key={i} className="bg-red-50 border border-red-200 text-red-600 p-4 text-sm font-bold rounded-2xl mb-6 text-center flex items-center justify-center gap-2 shadow-sm">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
@@ -95,7 +86,6 @@ export function DirectivoLoginPage() {
 
           <form onSubmit={onSubmit} className="space-y-6">
             
-            {/* 👇 INPUT DINÁMICO: Cambia dependiendo del switch 👇 */}
             {isDocente ? (
               <div>
                 <label className="block text-gray-500 text-[10px] font-black mb-2 uppercase tracking-widest px-1">Nombre de Usuario</label>
@@ -144,16 +134,12 @@ export function DirectivoLoginPage() {
         </div>
       </div>
 
-      {/* --- LADO DERECHO: AZUL INSTITUCIONAL (AHORA OCUPA EL 40%) --- */}
       <div className="hidden lg:flex lg:w-[40%] bg-blue-950 relative items-center justify-center z-20">
         
-        {/* 👇 LA CURVA AJUSTADA 👇 */}
         <div className="absolute top-[-10%] -left-[80px] w-[160px] h-[120%] bg-blue-950 rounded-[100%] shadow-[-15px_0_30px_rgba(0,0,0,0.15)] pointer-events-none"></div>
         
-        {/* Efecto de luz detrás del logo */}
         <div className="absolute w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[100px] pointer-events-none z-10"></div>
 
-        {/* Contenido (Logo y texto) */}
         <div className="relative z-30 flex flex-col items-center px-8">
           <img 
             src={logo} 

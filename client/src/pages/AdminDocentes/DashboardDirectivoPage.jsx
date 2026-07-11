@@ -54,7 +54,7 @@ export default function DashboardDirectivoPage() {
               <div>
                 <h1 className="text-2xl font-black text-white tracking-tight leading-none">Panel de Gestión Académica</h1>
                 <p className="text-blue-200 mt-1 text-sm font-medium">
-                  Bienvenido, Director de <span className="text-white font-bold">{user?.carrera || 'Cargando...'}</span>
+                  Bienvenido, Director <span className="text-white font-bold">{user?.nombre || user?.username || 'Directivo'}</span>
                 </p>
               </div>
             </div>
