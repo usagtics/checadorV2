@@ -56,10 +56,25 @@ export default function DashboardDirectivoPage() {
                 <p className="text-blue-200 mt-1 text-sm font-medium">
                   Bienvenido, Director <span className="text-white font-bold">{user?.nombre || user?.username || 'Directivo'}</span>
                 </p>
+                
+                {/* --- NUEVO: ETIQUETAS DE CARRERAS ASIGNADAS --- */}
+                {user?.carreras && user.carreras.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {user.carreras.map((carrera, index) => (
+                      <span 
+                        key={index} 
+                        className="bg-blue-800/60 text-blue-50 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border border-blue-700/50 shadow-sm backdrop-blur-sm"
+                      >
+                        {carrera.nombre || carrera.clave || 'Carrera'}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {/* ---------------------------------------------- */}
+                
               </div>
             </div>
             
-        
           </header>
 
           <div className="flex items-center gap-3 mb-6">

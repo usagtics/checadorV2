@@ -20,11 +20,17 @@ const grupoSchema = new mongoose.Schema({
         enum: ['Matutino', 'Vespertino', 'Sabatino', 'Virtual'],
         default: 'Matutino'
     },
+carrera: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'Carrera',
+    required: true 
+},
 
     activo: { 
         type: Boolean, 
         default: true 
     }
+    
 }, {
     timestamps: true
 });

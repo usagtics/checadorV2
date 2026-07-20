@@ -159,20 +159,32 @@ export const verifyDocenteToken = async (req, res) => {
     });
 };
 
-// OBTENER TODOS LOS DOCENTES (CON LA CORRECCIÓN DEL POPULATE)
 export const obtenerDocentes = async (req, res) => {
     try {
-        const docentes = await Docente.find().lean();
-        
-        // CORRECCIÓN AQUÍ: Se añade .populate('periodo') para resolver el "Sin definir"
-        const ofertas = await OfertaAcademica.find()
+        // 1. Obtenemos las carreras permitidas para este directivo desde su token
+        // (Asegúrate de pasar el req.user desde tu middleware verifyToken)
+        const carrerasDelDirectivo = req.user.carreras; 
+
+        // 2. Buscamos TODOS los grupos que pertenecen a esas carreras
+        const gruposPermitidos = await Grupo.find({ carrera: { $in: carrerasDelDirectivo } }).select('_id');
+        const idsGruposPermitidos = gruposPermitidos.map(g => g._id);
+
+        // 3. Buscamos las ofertas académicas vinculadas a esos grupos permitidos
+        const ofertasPermitidas = await OfertaAcademica.find({ grupo: { $in: idsGruposPermitidos } })
             .populate('materia')
             .populate('grupo')
-            .populate('periodo') 
+            .populate('periodo')
             .lean();
+
+        // 4. Extraemos los IDs únicos de los docentes que dan clases en esas ofertas
+        const idsDocentesPermitidos = [...new Set(ofertasPermitidas.map(o => o.docente.toString()))];
+
+        // 5. Ahora sí, traemos SOLAMENTE a los docentes que coinciden con esos IDs
+        const docentes = await Docente.find({ _id: { $in: idsDocentesPermitidos } }).lean();
         
+        // 6. Armamos la respuesta igual que antes, pero solo con la data filtrada
         const docentesConMaterias = docentes.map(docente => {
-            const susOfertas = ofertas.filter(o => o.docente && o.docente.toString() === docente._id.toString());
+            const susOfertas = ofertasPermitidas.filter(o => o.docente && o.docente.toString() === docente._id.toString());
             
             const materiasUnicas = [];
             const nombresAgregados = new Set();
@@ -195,7 +207,6 @@ export const obtenerDocentes = async (req, res) => {
         res.status(500).json({ message: error.message }); 
     }
 };
-
 // Obtener un solo Docente por ID
 export const obtenerDocente = async (req, res) => {
     try {

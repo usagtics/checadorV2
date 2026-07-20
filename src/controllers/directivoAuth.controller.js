@@ -46,7 +46,7 @@ export const registerDirectivo = async (req, res) => {
 export const loginDirectivo = async (req, res) => {
     const { email, password } = req.body;
     try {
-        const userFound = await Directivo.findOne({ email });
+        const userFound = await Directivo.findOne({ email }).populate('carreras');
         if (!userFound) return res.status(400).json(["Directivo no encontrado"]);
 
         const isMatch = await bcrypt.compare(password, userFound.password);
@@ -73,7 +73,7 @@ export const loginDirectivo = async (req, res) => {
 
 export const getDirectivos = async (req, res) => {
   try {
-    const directivos = await Directivo.find().select("-password");
+    const directivos = await Directivo.find().populate('carreras').select("-password");
     res.json(directivos);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -112,7 +112,7 @@ export const verifyToken = async (req, res) => {
   jwt.verify(token, TOKEN_SECRET, async (err, user) => {
     if (err) return res.status(401).json({ message: "No autorizado (Token inválido)" });
 
-    const userFound = await Directivo.findById(user.id);
+const userFound = await Directivo.findById(user.id).populate('carreras');
     if (!userFound) return res.status(401).json({ message: "No autorizado (Usuario no existe)" });
 
     return res.json({
@@ -120,7 +120,7 @@ export const verifyToken = async (req, res) => {
       username: userFound.username,
       email: userFound.email,
       role: userFound.role,
-      carreras: userFound.carreras // SE DEVUELVE PLURAL AL FRONTEND
+      carreras: userFound.carreras 
     });
   });
 };

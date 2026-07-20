@@ -3,6 +3,7 @@ import { useDirectivo } from '../../context/DirectivoContext';
 import { Link } from 'react-router-dom';
 
 import MenuDocentes from '../../menu/MenuDocentes';
+
 export default function DirectivosPage() {
     const { 
         getDirectivos, 
@@ -27,10 +28,8 @@ export default function DirectivosPage() {
     };
 
     return (
-        // ✅ ESTRUCTURA DE PANTALLA DIVIDIDA: flex, h-screen, overflow-hidden
         <div className="flex h-screen bg-gray-50 font-sans selection:bg-blue-900/10 overflow-hidden">
             
-            {/* --- MENÚ LATERAL (Izquierda) --- */}
             <MenuDocentes />
 
             {/* --- CONTENIDO PRINCIPAL (Derecha con scroll propio) --- */}
@@ -101,10 +100,24 @@ export default function DirectivosPage() {
                                                     </div>
                                                 </td>
 
+                                                {/* --- COLUMNA DE CARRERAS ACTUALIZADA --- */}
                                                 <td className="px-8 py-6">
-                                                    <span className="bg-gray-100 text-gray-600 px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-tight border border-gray-200">
-                                                        {d.carrera || 'No asignada'}
-                                                    </span>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {d.carreras && d.carreras.length > 0 ? (
+                                                            d.carreras.map((carrera, idx) => (
+                                                                <span 
+                                                                    key={idx} 
+                                                                    className="bg-gray-100 text-gray-600 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tight border border-gray-200 whitespace-nowrap"
+                                                                >
+                                                                    {carrera.nombre || carrera.clave || 'Carrera'}
+                                                                </span>
+                                                            ))
+                                                        ) : (
+                                                            <span className="bg-red-50 text-red-500 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-tight border border-red-100">
+                                                                NO ASIGNADA
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </td>
 
                                                 <td className="px-8 py-6 text-center">

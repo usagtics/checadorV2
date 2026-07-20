@@ -41,26 +41,22 @@ export default function DocentesListPage() {
   };
 
   const docentesFiltrados = docentes.filter(docente => {
+    // 1. Filtro por buscador (Nombre, apellidos o matrícula)
     const matchesSearch = 
       docente.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
       docente.apellidos.toLowerCase().includes(searchTerm.toLowerCase()) ||
       docente.numeroEmpleado.toLowerCase().includes(searchTerm.toLowerCase());
 
+    // 2. Filtro por periodo activo
     let matchesPeriodo = true;
     if (selectedPeriodo !== "") {
         matchesPeriodo = docente.ofertaAcademica?.some(
-            oferta => oferta.periodo && oferta.periodo._id === selectedPeriodo
+            oferta => oferta.periodo && (oferta.periodo._id === selectedPeriodo || oferta.periodo === selectedPeriodo)
         );
     }
 
-    let matchesCarrera = true;
-    if (user?.role !== 'super-admin' && user?.carreras && user.carreras.length > 0) {
-        matchesCarrera = docente.ofertaAcademica?.some(
-            oferta => oferta.grupo && user.carreras.includes(oferta.grupo.programa)
-        );
-    }
-
-    return matchesSearch && matchesPeriodo && matchesCarrera;
+    // Retornamos solo la búsqueda y el periodo. ¡El backend ya filtró las carreras!
+    return matchesSearch && matchesPeriodo;
   });
 
   // 👇 NUEVA LÓGICA: Procesar y agrupar el horario por día para el modal 👇
@@ -123,7 +119,11 @@ export default function DocentesListPage() {
                 <h1 className="text-4xl font-black text-gray-900 tracking-tighter">Plantilla de Docentes</h1>
               </div>
               <p className="text-gray-500 font-medium ml-4">
-                Carrera de <span className="font-bold text-blue-900 bg-blue-50 px-3 py-1 rounded-lg border border-blue-100">{user?.carreras?.join(', ') || 'Administración'}</span>
+                Carrera de <span className="font-bold text-blue-900 bg-blue-50 px-3 py-1 rounded-lg border border-blue-100">
+                  {user?.carreras && user.carreras.length > 0 
+                    ? user.carreras.map(c => c.nombre || c.clave).join(', ') 
+                    : 'Administración'}
+                </span>
               </p>
             </div>
             

@@ -3,7 +3,7 @@ import Docente from '../models/docentes.model.js';
 import OfertaAcademica from '../models/ofertaAcademica.model.js';
 import AsistenciaDocente from '../models/asistenciaDocente.model.js';
 import Periodo from '../models/periodo.model.js'; 
-import CryptoJS from 'crypto-js'; // IMPORTANTE: El cerrajero para leer el QR
+import CryptoJS from 'crypto-js'; 
 
 const convertirHoraAMinutos = (horaString) => {
     const [horas, minutos] = horaString.split(':').map(Number);
@@ -23,7 +23,6 @@ export const registrarAsistenciaQR = async (req, res) => {
 
         let matriculaLimpia = null;
 
-        // --- LÓGICA DE DESENCRIPTADO Y SEGURIDAD ANTI-TRAMPA ---
         try {
             const bytes = CryptoJS.AES.decrypt(tokenQR, 'SECRETO_USAG_2026'); 
             const stringDesencriptado = bytes.toString(CryptoJS.enc.Utf8);
@@ -43,7 +42,7 @@ export const registrarAsistenciaQR = async (req, res) => {
             return res.status(400).json({ message: 'El formato del QR es inválido o no seguro.' });
         }
 
-        // --- LÓGICA DE ASISTENCIA ---
+
         const docente = await Docente.findOne({ 
             numeroEmpleado: { $regex: new RegExp(`^${matriculaLimpia}$`, 'i') } 
         });
@@ -75,7 +74,7 @@ export const registrarAsistenciaQR = async (req, res) => {
         let materiaPorCerrar = null;
         let materiaPorAbrir = null;
 
-        // CORRECCIÓN: Filtramos todos los horarios del día, no solo el primero
+
         for (const oferta of clasesAsignadas) {
             const horariosHoy = oferta.horarios.filter(h => h.diaSemana === diaHoy);
             
@@ -117,7 +116,7 @@ export const registrarAsistenciaQR = async (req, res) => {
             const inicioClaseMinutos = convertirHoraAMinutos(horarioActual.horaInicio);
             let estatusCalculado = 'A tiempo';
             
-            // Lógica de tolerancias validada
+
             if (horaActualMinutos > (inicioClaseMinutos + 10)) estatusCalculado = 'Falta';
             else if (horaActualMinutos > (inicioClaseMinutos + 5)) estatusCalculado = 'Retardo';
 
@@ -158,7 +157,22 @@ export const obtenerTodasLasAsistencias = async (req, res) => {
     try {
         const periodoActivo = await Periodo.findOne({ activo: true });
         
-        const asistenciasBrutas = await AsistenciaDocente.find()
+        // --- 1. NUEVO CÓDIGO DE FILTRADO POR CARRERA ---
+        let filtroAsistencias = {};
+        
+        // Verificamos si el usuario de la petición tiene un arreglo de carreras asignadas
+        if (req.user && req.user.carreras && req.user.carreras.length > 0) {
+            // Buscamos todos los grupos que pertenezcan a las carreras permitidas
+            const gruposPermitidos = await Grupo.find({ carrera: { $in: req.user.carreras } }).select('_id');
+            const idsGruposPermitidos = gruposPermitidos.map(g => g._id);
+            
+            // Asignamos el filtro para buscar solo asistencias vinculadas a esos grupos
+            filtroAsistencias = { grupo: { $in: idsGruposPermitidos } };
+        }
+        // -----------------------------------------------
+        
+        // 2. Pasamos el filtro a la búsqueda (si no hay carreras, filtroAsistencias estará vacío y traerá todo)
+        const asistenciasBrutas = await AsistenciaDocente.find(filtroAsistencias)
             .populate('docente', 'nombre apellidos numeroEmpleado turno')
             .populate('materia', 'nombre')
             .populate('grupo', 'nombre')
@@ -171,8 +185,7 @@ export const obtenerTodasLasAsistencias = async (req, res) => {
             if (!asistencia.docente) return asistencia;
 
             const diaChecada = diasSemana[new Date(asistencia.fecha).getDay()];
-            
-            // FILTRAMOS POR PERIODO ACTIVO (Si existe)
+
             const queryOferta = { docente: asistencia.docente._id };
             if (periodoActivo) queryOferta.periodo = periodoActivo._id;
 
@@ -216,13 +229,24 @@ export const getNominaDetalle = async (req, res) => {
         const { fechaInicio, fechaFin } = req.query;
         const periodoActivo = await Periodo.findOne({ activo: true });
         
-        // 1. Traemos las asistencias con la materia y el grupo
-        const asistencias = await AsistenciaDocente.find({
+        // --- NUEVO: FILTRO DE SEGURIDAD POR CARRERA ---
+        let queryAsistencias = {
             fecha: { 
                 $gte: new Date(`${fechaInicio}T00:00:00.000Z`), 
                 $lte: new Date(`${fechaFin}T23:59:59.999Z`) 
             }
-        }).populate('docente materia grupo').sort({ fecha: 1 });
+        };
+
+        if (req.user && req.user.carreras && req.user.carreras.length > 0) {
+            const gruposPermitidos = await Grupo.find({ carrera: { $in: req.user.carreras } }).select('_id');
+            const idsGruposPermitidos = gruposPermitidos.map(g => g._id);
+            queryAsistencias.grupo = { $in: idsGruposPermitidos };
+        }
+        // ----------------------------------------------
+
+        // 1. Traemos las asistencias aplicando el filtro
+        const asistencias = await AsistenciaDocente.find(queryAsistencias)
+            .populate('docente materia grupo').sort({ fecha: 1 });
 
         const emparejamiento = {};
         const nomina = {};
@@ -275,7 +299,6 @@ export const getNominaDetalle = async (req, res) => {
             if (par.entrada && par.salida && par.salida > par.entrada) {
                 const horasTrabajadas = (par.salida - par.entrada) / (1000 * 60 * 60);
                 
-                // --- CORRECCIÓN AQUÍ: Buscamos la Oferta Académica para asegurar el turno ---
                 const oferta = await OfertaAcademica.findOne({
                     docente: par.docente._id,
                     materia: par.materia._id,
@@ -284,14 +307,11 @@ export const getNominaDetalle = async (req, res) => {
 
                 let turnoClase = 'Matutino';
                 if (oferta) {
-                    // Busca el turno en la oferta, si no en el grupo de la oferta, si no en el docente
                     turnoClase = oferta.turno || oferta.grupo?.turno || par.docente.turno || 'Matutino';
                 } else {
-                    // Respaldo por si no encuentra la oferta
                     turnoClase = par.grupo?.turno || par.docente.turno || 'Matutino';
                 }
                 
-                // Normalizamos el texto por si viene en minúsculas en tu BD
                 const turnoLimpio = turnoClase.toUpperCase();
 
                 if (turnoLimpio === 'SABATINO') {
@@ -306,7 +326,6 @@ export const getNominaDetalle = async (req, res) => {
                 }
             }
 
-            // Agregamos las incidencias
             par.estatusList.forEach(est => {
                 const desc = `${est} en ${par.materia.nombre || 'Clase'}`;
                 if (!nomina[docenteId].incidencias.includes(desc)) {
@@ -467,7 +486,24 @@ export const getDesgloseDia = async (req, res) => {
 export const getCumplimientoDocente = async (req, res) => {
     try {
         const periodoActivo = await Periodo.findOne({ activo: true });
-        const docentes = await Docente.find();
+        
+        // --- NUEVO: FILTRO DE SEGURIDAD POR CARRERA ---
+        let queryDocentes = {};
+        if (req.user && req.user.carreras && req.user.carreras.length > 0) {
+            // Buscamos grupos permitidos
+            const gruposPermitidos = await Grupo.find({ carrera: { $in: req.user.carreras } }).select('_id');
+            const idsGrupos = gruposPermitidos.map(g => g._id);
+            
+            // Buscamos a los maestros que dan clases en esos grupos
+            const ofertas = await OfertaAcademica.find({ grupo: { $in: idsGrupos } }).select('docente');
+            const idsDocentes = [...new Set(ofertas.map(o => o.docente.toString()))];
+            
+            queryDocentes = { _id: { $in: idsDocentes } };
+        }
+        // ----------------------------------------------
+
+        // Ejecutamos la búsqueda de docentes con o sin filtro según corresponda
+        const docentes = await Docente.find(queryDocentes);
         const reporteCumplimiento = [];
 
         for (const doc of docentes) {
@@ -482,14 +518,13 @@ export const getCumplimientoDocente = async (req, res) => {
                 });
             });
 
-
             const unaSemanaAtras = new Date();
             unaSemanaAtras.setDate(unaSemanaAtras.getDate() - 7);
             
+            // B. Horas reales basándonos en sus checadas (puedes agregar la lógica que sume las horas reales aquí)
             const asistencias = await AsistenciaDocente.find({ docente: doc._id, fecha: { $gte: unaSemanaAtras } });
-
-            let horasReales = 0;
-
+            
+            let horasReales = 0; // (La suma real dependerá de la lógica que definas, actualmente está en 0)
             
             reporteCumplimiento.push({
                 nombre: `${doc.nombre} ${doc.apellidos}`,
