@@ -1,12 +1,13 @@
 import { Router } from 'express';
 import { crearMateria, obtenerMaterias, obtenerMateria, actualizarMateria, eliminarMateria } from '../controllers/materias.controller.js';
+import { authRequired } from '../middlewares/validateToken.js'; 
 
 const router = Router();
 
-router.post('/materias', crearMateria);
-router.get('/materias', obtenerMaterias);
-router.get('/materias/:id', obtenerMateria);
-router.put('/materias/:id', actualizarMateria);
-router.delete('/materias/:id', eliminarMateria);
+router.post('/materias', authRequired, crearMateria);
+router.get('/materias', authRequired, obtenerMaterias);
+router.get('/materias/:id', authRequired, obtenerMateria);
+router.put('/materias/:id', authRequired, actualizarMateria);
+router.delete('/materias/:id', authRequired, eliminarMateria);
 
 export default router;

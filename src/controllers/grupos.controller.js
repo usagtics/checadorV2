@@ -4,13 +4,15 @@ export const crearGrupo = async (req, res) => {
     console.log("BODY RECIBIDO EN EL SERVER:", req.body);
 
     try {
-        const { nombre, programa, turno, activo } = req.body;
+        // Añadimos "carrera" para que se reciba desde el frontend
+        const { nombre, programa, turno, activo, carrera } = req.body;
         
         const nuevoGrupo = new Grupo({ 
             nombre, 
             programa, 
             turno, 
-            activo 
+            activo,
+            carrera // Guardamos la carrera a la que pertenece
         });
         
         const grupoGuardado = await nuevoGrupo.save();
@@ -22,10 +24,14 @@ export const crearGrupo = async (req, res) => {
 
 export const obtenerGrupos = async (req, res) => {
     try {
-        // --- SUPERPODER AÑADIDO: Filtros dinámicos ---
-        // Si React pide /api/grupos?programa=TSU, req.query tendrá { programa: 'TSU' }
-        // Mongoose usará eso para filtrar. Si no mandan nada, trae todos.
-        const filtros = req.query || {}; 
+        // Hacemos una copia de req.query para no mutar el objeto original
+        const filtros = { ...req.query }; 
+        
+        // --- FILTRO DE SEGURIDAD PARA DIRECTIVOS ---
+        // Si el usuario existe, NO es super-admin, y tiene carreras asignadas, aplicamos el candado
+        if (req.user && req.user.role !== 'super-admin' && req.user.carreras && req.user.carreras.length > 0) {
+            filtros.carrera = { $in: req.user.carreras };
+        }
         
         const grupos = await Grupo.find(filtros);
         res.json(grupos);
