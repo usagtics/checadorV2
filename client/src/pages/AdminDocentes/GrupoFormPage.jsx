@@ -1,26 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { useGrupos } from '../../context/GrupoContext'; 
+// Importación en plural
 import { useCarreras } from '../../context/CarreraContext';
 import { useNavigate, Link } from 'react-router-dom';
 import MenuDocentes from '../../menu/MenuDocentes';
 
 export default function GrupoFormPage() {
   const { createGrupo, errors: backendErrors } = useGrupos();
-  const { carreras, getCarreras } = useCarrera(); 
+  // 👇 AQUÍ ESTÁ LA CORRECCIÓN: Se cambió useCarrera() por useCarreras() 👇
+  const { carreras, getCarreras } = useCarreras(); 
   const navigate = useNavigate();
 
   const [grupo, setGrupo] = useState({
     nombre: '',
     programa: 'Licenciatura', 
     turno: 'Matutino',
-    carrera: '', // ID de la carrera
+    carrera: '', 
     activo: true
   });
 
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Si al ejecutar esto da error, verifica que getCarreras esté exportado en tu contexto
     if (getCarreras) getCarreras();
   }, []);
 

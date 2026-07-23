@@ -13,11 +13,10 @@ const grupoSchema = new mongoose.Schema({
         default: 'Licenciatura'
     },
 
-    // --- NUEVO: EL TURNO / MODALIDAD ---
     turno: {
         type: String,
         required: true,
-        enum: ['Matutino', 'Vespertino', 'Sabatino', 'Virtual'],
+        enum: ['Matutino', 'Vespertino', 'Sabatino', 'Virtual', 'Dominical'],
         default: 'Matutino'
     },
 carrera: { 
