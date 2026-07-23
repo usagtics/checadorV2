@@ -52,10 +52,12 @@ export const loginDirectivo = async (req, res) => {
         const isMatch = await bcrypt.compare(password, userFound.password);
         if (!isMatch) return res.status(400).json(["Credenciales incorrectas"]);
 
+        const carrerasIds = userFound.carreras.map(carrera => carrera._id);
+
         const token = await createAccessToken({ 
             id: userFound._id, 
             role: userFound.role, 
-            carreras: userFound.carreras 
+            carreras: carrerasIds 
         });
 
         res.cookie('token', token);
@@ -63,7 +65,7 @@ export const loginDirectivo = async (req, res) => {
             id: userFound._id,
             username: userFound.username,
             email: userFound.email,
-            carreras: userFound.carreras,
+            carreras: userFound.carreras, 
             role: userFound.role
         });
     } catch (error) {
