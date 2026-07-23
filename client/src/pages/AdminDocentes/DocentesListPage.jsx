@@ -55,11 +55,9 @@ export default function DocentesListPage() {
         );
     }
 
-    // Retornamos solo la búsqueda y el periodo. ¡El backend ya filtró las carreras!
     return matchesSearch && matchesPeriodo;
   });
 
-  // 👇 NUEVA LÓGICA: Procesar y agrupar el horario por día para el modal 👇
   const horarioAgrupado = useMemo(() => {
     if (!selectedDocente || !selectedDocente.ofertaAcademica) return [];
 
@@ -69,7 +67,6 @@ export default function DocentesListPage() {
     selectedDocente.ofertaAcademica.forEach(oferta => {
       if (oferta.horarios && oferta.horarios.length > 0) {
         oferta.horarios.forEach(horario => {
-          // Normalizar el nombre del día
           const diaRaw = horario.dia || horario.diaSemana;
           const dia = diaRaw.charAt(0).toUpperCase() + diaRaw.slice(1).toLowerCase();
 
@@ -86,7 +83,6 @@ export default function DocentesListPage() {
       }
     });
 
-    // Convertir el objeto a un arreglo ordenado por día y luego por hora de inicio
     return Object.keys(agrupado)
       .sort((a, b) => diasOrden.indexOf(a) - diasOrden.indexOf(b))
       .map(dia => ({
@@ -114,22 +110,34 @@ export default function DocentesListPage() {
           
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
             <div>
-              <div className="flex items-center gap-3 mb-1">
+              <div className="flex items-center gap-3 mb-2">
                 <div className="h-8 w-1.5 bg-blue-900 rounded-full"></div>
                 <h1 className="text-4xl font-black text-gray-900 tracking-tighter">Plantilla de Docentes</h1>
               </div>
-              <p className="text-gray-500 font-medium ml-4">
-                Carrera de <span className="font-bold text-blue-900 bg-blue-50 px-3 py-1 rounded-lg border border-blue-100">
-                  {user?.carreras && user.carreras.length > 0 
-                    ? user.carreras.map(c => c.nombre || c.clave).join(', ') 
-                    : 'Administración'}
-                </span>
-              </p>
+              
+              {/* 👇 NUEVO DISEÑO PARA LAS CARRERAS 👇 */}
+              <div className="flex flex-wrap items-center gap-2 ml-4">
+                <span className="text-gray-500 font-medium text-sm mr-1">Gestión de:</span>
+                {user?.carreras && user.carreras.length > 0 ? (
+                  user.carreras.map((c, index) => (
+                    <span 
+                      key={index} 
+                      className="font-bold text-[10px] uppercase tracking-widest text-blue-900 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 shadow-sm"
+                    >
+                      {c.nombre || c.clave}
+                    </span>
+                  ))
+                ) : (
+                  <span className="font-bold text-[10px] uppercase tracking-widest text-gray-600 bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm">
+                    Administración General
+                  </span>
+                )}
+              </div>
             </div>
             
             <Link 
               to="/admin/registro-docente" 
-              className="group bg-blue-900 hover:bg-blue-950 text-white px-8 py-4 rounded-2xl font-black transition-all shadow-lg shadow-blue-900/20 flex items-center gap-2 transform active:scale-95"
+              className="group bg-blue-900 hover:bg-blue-950 text-white px-8 py-4 rounded-2xl font-black transition-all shadow-lg shadow-blue-900/20 flex items-center gap-2 transform active:scale-95 mt-4 md:mt-0"
             >
               NUEVO DOCENTE
             </Link>
@@ -299,7 +307,6 @@ export default function DocentesListPage() {
         </div>
       )}
 
-      {/* 👇 NUEVO DISEÑO DEL MODAL DE HORARIO 👇 */}
       {showHorarioModal && selectedDocente && (
         <div className="fixed inset-0 bg-blue-900/40 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
           <div className="bg-white rounded-[3rem] p-8 md:p-10 max-w-3xl w-full shadow-2xl animate-in fade-in zoom-in duration-300 flex flex-col max-h-[90vh]">
@@ -322,7 +329,6 @@ export default function DocentesListPage() {
               {horarioAgrupado.length > 0 ? (
                 horarioAgrupado.map((diaInfo, idx) => (
                   <div key={idx} className="bg-gray-50 rounded-[2rem] border border-gray-100 p-6 relative overflow-hidden">
-                    {/* Decoración visual para el día */}
                     <div className="absolute top-0 left-0 w-2 h-full bg-indigo-500 rounded-l-[2rem]"></div>
                     
                     <h3 className="text-lg font-black text-indigo-900 mb-4 ml-4 flex items-center gap-2">

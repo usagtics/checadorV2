@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useDocentes } from '../../context/DocenteContext';
 import { QRCodeSVG } from 'qrcode.react'; 
 import CryptoJS from 'crypto-js';
@@ -42,6 +42,45 @@ export default function DocenteDashboard() {
     };
   }, [docente]);
 
+  // --- NUEVA LÓGICA: AGRUPAR HORARIO DEL DOCENTE ---
+  const horarioAgrupado = useMemo(() => {
+    if (!docente || !docente.ofertaAcademica) return [];
+
+    const diasOrden = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+    const agrupado = {};
+
+    docente.ofertaAcademica.forEach(oferta => {
+      if (oferta.horarios && oferta.horarios.length > 0) {
+        oferta.horarios.forEach(horario => {
+          // Normalizar el nombre del día
+          const diaRaw = horario.dia || horario.diaSemana;
+          if (!diaRaw) return;
+          
+          const dia = diaRaw.charAt(0).toUpperCase() + diaRaw.slice(1).toLowerCase();
+
+          if (!agrupado[dia]) agrupado[dia] = [];
+          
+          agrupado[dia].push({
+            materia: oferta.materia?.nombre || (typeof oferta.materia === 'string' ? oferta.materia : 'Materia sin nombre'),
+            grupo: oferta.grupo?.nombre || 'General',
+            periodo: oferta.periodo?.nombre || 'Sin definir',
+            horaInicio: horario.horaInicio,
+            horaFin: horario.horaFin
+          });
+        });
+      }
+    });
+
+    // Convertir a arreglo y ordenar por día y hora
+    return Object.keys(agrupado)
+      .sort((a, b) => diasOrden.indexOf(a) - diasOrden.indexOf(b))
+      .map(dia => ({
+        dia,
+        clases: agrupado[dia].sort((a, b) => a.horaInicio.localeCompare(b.horaInicio))
+      }));
+  }, [docente]);
+
+
   if (!docente) {
     return (
       <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center">
@@ -63,7 +102,7 @@ export default function DocenteDashboard() {
                     Hola, {docente?.nombre}
                 </h1>
             </div>
-            <p className="text-gray-500 font-medium ml-4 text-sm">Bienvenido a tu panel docente de USAG.</p>
+            <p className="text-gray-500 font-medium ml-4 text-sm">Bienvenido a tu panel docente.</p>
         </header>
 
         {/* --- CONTENIDO PRINCIPAL --- */}
@@ -108,27 +147,61 @@ export default function DocenteDashboard() {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-400 text-xs font-bold uppercase tracking-widest">Correo</span>
-                  <span className="text-gray-700 font-bold text-sm truncate max-w-[150px]">{docente?.email}</span>
+                  <span className="text-gray-700 font-bold text-sm truncate max-w-[150px]" title={docente?.email}>{docente?.email}</span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* COLUMNA DERECHA: MATERIAS Y HORAS */}
+          {/* COLUMNA DERECHA: HORARIO SEMANAL */}
           <div className="lg:col-span-2 space-y-8">
-            <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100">
-              <h3 className="text-xl font-black text-gray-900 mb-8">Tus Materias Asignadas</h3>
-              {docente?.materias?.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {docente.materias.map((materia, idx) => (
-                    <div key={idx} className="border border-gray-100 p-5 rounded-2xl hover:border-blue-200 transition-all">
-                      <h4 className="font-bold text-gray-900">{typeof materia === 'string' ? materia : materia.nombre}</h4>
+            <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100 h-full">
+              <h3 className="text-xl font-black text-gray-900 mb-8 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Tu Agenda Semanal
+              </h3>
+              
+              <div className="space-y-6">
+                {horarioAgrupado.length > 0 ? (
+                  horarioAgrupado.map((diaInfo, idx) => (
+                    <div key={idx} className="bg-gray-50/50 rounded-2xl border border-gray-100 p-5 relative overflow-hidden">
+                      <div className="absolute top-0 left-0 w-1.5 h-full bg-blue-900 rounded-l-2xl"></div>
+                      
+                      <h4 className="text-sm font-black text-blue-900 uppercase tracking-widest mb-4 ml-3">
+                        {diaInfo.dia}
+                      </h4>
+
+                      <div className="space-y-3 ml-3">
+                        {diaInfo.clases.map((clase, cIdx) => (
+                          <div key={cIdx} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div>
+                              <p className="font-bold text-gray-900 leading-tight">{clase.materia}</p>
+                              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">
+                                Grupo: <span className="text-blue-600">{clase.grupo}</span>
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg border border-blue-100 w-fit shrink-0">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              <span className="font-black text-sm">{clase.horaInicio} - {clase.horaFin}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-400 font-bold uppercase text-xs">Sin materias asignadas</p>
-              )}
+                  ))
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-center bg-gray-50 rounded-3xl border border-dashed border-gray-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="text-gray-500 font-bold">Aún no tienes horarios asignados para este ciclo.</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

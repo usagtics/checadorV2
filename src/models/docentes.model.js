@@ -27,7 +27,6 @@ const docenteSchema = new mongoose.Schema({
         enum: ['TARJETA', 'EFECTIVO'], 
         default: 'TARJETA' 
     },
-    // -----------------------------------------------------------
 
     turno: { 
         type: String, 
@@ -35,6 +34,12 @@ const docenteSchema = new mongoose.Schema({
         enum: ['Matutino', 'Vespertino', 'Sabatino', 'Virtual'],
         default: 'Matutino'
     },
+    
+    carreras: [{ 
+        type: mongoose.Schema.Types.ObjectId, 
+        ref: 'Carrera' 
+    }],
+
     qrCode: { type: String },
     activo: { type: Boolean, default: true }
 }, {

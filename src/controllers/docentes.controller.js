@@ -87,7 +87,7 @@ export const loginDocente = async (req, res) => {
     }
 };
 
-// Crear nuevo Docente
+// Crear nuevo Docente (ACTUALIZADO: Hereda las carreras del directivo)
 export const crearDocente = async (req, res) => {
     try {
         const { 
@@ -100,15 +100,18 @@ export const crearDocente = async (req, res) => {
         if (docenteExistente) return res.status(400).json({ message: ['El docente ya existe (email, usuario o nómina duplicado)'] });
         
         const passwordHash = await bcrypt.hash(password, 10);
-        
         const qrCodeImage = await QRCode.toDataURL(numeroEmpleado); 
+        
+        // 👇 Extraemos las carreras del directivo que está haciendo el registro
+        const carrerasAsignadas = req.user && req.user.carreras ? req.user.carreras : [];
         
         const nuevoDocente = new Docente({ 
             nombre, apellidos, numeroEmpleado, email, username, 
             password: passwordHash, 
             pagoHoraMatutino, pagoHoraSabatino, pagoHoraLinea, 
             metodoPago, turno, 
-            qrCode: qrCodeImage 
+            qrCode: qrCodeImage,
+            carreras: carrerasAsignadas // 👇 Asignamos las carreras al nuevo maestro
         });
         
         const docenteGuardado = await nuevoDocente.save();
@@ -159,32 +162,31 @@ export const verifyDocenteToken = async (req, res) => {
     });
 };
 
+// Obtener Docentes (ACTUALIZADO: Filtro más eficiente directo al perfil)
 export const obtenerDocentes = async (req, res) => {
     try {
-        // 1. Obtenemos las carreras permitidas para este directivo desde su token
-        // (Asegúrate de pasar el req.user desde tu middleware verifyToken)
-        const carrerasDelDirectivo = req.user.carreras; 
+        // 1. Obtenemos las carreras permitidas para este directivo
+        const carrerasDelDirectivo = req.user && req.user.carreras ? req.user.carreras : [];
 
-        // 2. Buscamos TODOS los grupos que pertenecen a esas carreras
-        const gruposPermitidos = await Grupo.find({ carrera: { $in: carrerasDelDirectivo } }).select('_id');
-        const idsGruposPermitidos = gruposPermitidos.map(g => g._id);
+        // 2. Si el directivo no tiene carreras (admin general), trae todos. 
+        // Si tiene carreras, trae solo los docentes vinculados a ellas.
+        const filtro = carrerasDelDirectivo.length > 0 
+            ? { carreras: { $in: carrerasDelDirectivo } } 
+            : {};
 
-        // 3. Buscamos las ofertas académicas vinculadas a esos grupos permitidos
-        const ofertasPermitidas = await OfertaAcademica.find({ grupo: { $in: idsGruposPermitidos } })
+        const docentes = await Docente.find(filtro).lean();
+        
+        // 3. Traemos las ofertas de estos docentes para mapear sus materias
+        const idsDocentes = docentes.map(d => d._id);
+        const ofertas = await OfertaAcademica.find({ docente: { $in: idsDocentes } })
             .populate('materia')
             .populate('grupo')
             .populate('periodo')
             .lean();
-
-        // 4. Extraemos los IDs únicos de los docentes que dan clases en esas ofertas
-        const idsDocentesPermitidos = [...new Set(ofertasPermitidas.map(o => o.docente.toString()))];
-
-        // 5. Ahora sí, traemos SOLAMENTE a los docentes que coinciden con esos IDs
-        const docentes = await Docente.find({ _id: { $in: idsDocentesPermitidos } }).lean();
         
-        // 6. Armamos la respuesta igual que antes, pero solo con la data filtrada
+        // 4. Mapeamos la data final
         const docentesConMaterias = docentes.map(docente => {
-            const susOfertas = ofertasPermitidas.filter(o => o.docente && o.docente.toString() === docente._id.toString());
+            const susOfertas = ofertas.filter(o => o.docente && o.docente.toString() === docente._id.toString());
             
             const materiasUnicas = [];
             const nombresAgregados = new Set();
@@ -207,6 +209,7 @@ export const obtenerDocentes = async (req, res) => {
         res.status(500).json({ message: error.message }); 
     }
 };
+
 // Obtener un solo Docente por ID
 export const obtenerDocente = async (req, res) => {
     try {
