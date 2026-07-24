@@ -6,7 +6,15 @@ import OfertaAcademica from '../models/ofertaAcademica.model.js';
 export const crearMateria = async (req, res) => {
     try {
         const { nombre, clave } = req.body;
-        const nuevaMateria = new Materia({ nombre, clave });
+
+        const carrerasAsignadas = req.user && req.user.carreras ? req.user.carreras : [];
+
+        const nuevaMateria = new Materia({ 
+            nombre, 
+            clave,
+            carreras: carrerasAsignadas 
+        });
+
         const materiaGuardada = await nuevaMateria.save();
         res.status(201).json(materiaGuardada);
     } catch (error) {
@@ -16,27 +24,17 @@ export const crearMateria = async (req, res) => {
 
 export const obtenerMaterias = async (req, res) => {
     try {
-        // 1. Si no hay usuario, no tiene carreras asignadas, o es super-admin, 
-        // le mostramos todo el catálogo completo de materias de la universidad.
-        if (!req.user || !req.user.carreras || req.user.carreras.length === 0 || req.user.role === 'super-admin') {
-            const materias = await Materia.find();
-            return res.json(materias);
-        }
+        // 1. Obtenemos las carreras permitidas para este directivo
+        const carrerasDelDirectivo = req.user && req.user.carreras ? req.user.carreras : [];
 
-        // --- FILTRO DE SEGURIDAD PARA DIRECTIVOS ---
-        
-        // 2. Encontramos los grupos que pertenecen a las carreras autorizadas
-        const gruposPermitidos = await Grupo.find({ carrera: { $in: req.user.carreras } }).select('_id');
-        const idsGruposPermitidos = gruposPermitidos.map(g => g._id);
+        // 2. Si no hay usuario, no tiene carreras asignadas, o es super-admin, le mostramos todo.
+        // De lo contrario, filtramos solo por sus carreras asignadas.
+        const filtro = (carrerasDelDirectivo.length > 0 && req.user.role !== 'super-admin')
+            ? { carreras: { $in: carrerasDelDirectivo } }
+            : {};
 
-        // 3. Buscamos las clases (ofertas académicas) vinculadas a esos grupos
-        const ofertas = await OfertaAcademica.find({ grupo: { $in: idsGruposPermitidos } }).select('materia');
-        
-        // 4. Extraemos los IDs únicos de las materias que se imparten en esas clases
-        const idsMateriasPermitidas = [...new Set(ofertas.map(o => o.materia.toString()))];
-
-        // 5. Devolvemos únicamente las materias que coincidan con esos IDs
-        const materias = await Materia.find({ _id: { $in: idsMateriasPermitidas } });
+        // 3. Ejecutamos la búsqueda limpia y directa a la base de datos
+        const materias = await Materia.find(filtro);
         res.json(materias);
         
     } catch (error) {
@@ -63,6 +61,7 @@ export const actualizarMateria = async (req, res) => {
         res.status(500).json({ message: 'Error al actualizar la materia', error: error.message });
     }
 };
+
 
 export const eliminarMateria = async (req, res) => {
     try {

@@ -1,8 +1,15 @@
 import mongoose from 'mongoose';
 
 const materiaSchema = new mongoose.Schema({
-    nombre: { type: String, required: true }, // Ej: "Enfermería Básica"
-    clave: { type: String, unique: true },    // Ej: "ENF-101"
+    nombre: { type: String, required: true }, 
+    clave: { type: String, unique: true },   
+    
+
+    carreras: [{ 
+        type: mongoose.Schema.Types.ObjectId, 
+        ref: 'Carrera' 
+    }],
+    
     activa: { type: Boolean, default: true }
 }, {
     timestamps: true
