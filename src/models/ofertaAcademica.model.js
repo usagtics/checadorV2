@@ -18,7 +18,7 @@ const ofertaAcademicaSchema = new mongoose.Schema({
     },
     turno: {
         type: String,
-        enum: ['Matutino', 'Sabatino', 'Virtual', 'Línea'],
+        enum: ['Matutino', 'Sabatino', 'Virtual', 'Línea', 'Dominical'],
         required: true,
         default: 'Matutino'
     },
