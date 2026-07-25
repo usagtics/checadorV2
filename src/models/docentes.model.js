@@ -6,7 +6,6 @@ const docenteSchema = new mongoose.Schema({
     numeroEmpleado: { type: String, required: true, unique: true },
     email: { type: String, required: true, unique: true },
     
-    // --- CAMPOS DE IDENTIDAD Y ACCESO ---
     username: { 
         type: String, 
         required: true, 
@@ -18,7 +17,6 @@ const docenteSchema = new mongoose.Schema({
         required: true 
     },
 
-    // --- NUEVOS CAMPOS DE NÓMINA (Sustituyen a pagoPorHora) ---
     pagoHoraSabatino: { type: Number, default: 200 },
     pagoHoraMatutino: { type: Number, default: 200 },
     pagoHoraLinea: { type: Number, default: 250 },
@@ -31,7 +29,7 @@ const docenteSchema = new mongoose.Schema({
     turno: { 
         type: String, 
         required: true,
-        enum: ['Matutino', 'Vespertino', 'Sabatino', 'Virtual'],
+        enum: ['Matutino', 'Vespertino', 'Sabatino', 'Virtual', 'Dominical'],
         default: 'Matutino'
     },
     

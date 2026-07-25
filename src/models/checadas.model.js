@@ -30,13 +30,11 @@ const checadaSchema = new mongoose.Schema({
     default: false,
   },
 
-  // 👇 AQUÍ ESTÁ EL CAMBIO IMPORTANTE 👇
-  // Este campo guardará el texto: "Asistencia", "Retardo" o "Falta"
   status: {
     type: String,
     default: 'Asistencia' 
   },
-  // -----------------------------------
+  
 
   tipoHorario: {
     type: mongoose.Schema.Types.ObjectId,
@@ -54,5 +52,4 @@ const checadaSchema = new mongoose.Schema({
 
 const Checada = mongoose.model('Checada', checadaSchema);
 
-// ✅ USAMOS EXPORT DEFAULT PARA EVITAR ERRORES DE IMPORTACIÓN
 export default Checada;
