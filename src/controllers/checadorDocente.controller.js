@@ -4,6 +4,7 @@ import OfertaAcademica from '../models/ofertaAcademica.model.js';
 import AsistenciaDocente from '../models/asistenciaDocente.model.js';
 import Periodo from '../models/periodo.model.js'; 
 import CryptoJS from 'crypto-js'; 
+import Grupo from '../models/grupos.model.js';
 
 const convertirHoraAMinutos = (horaString) => {
     const [horas, minutos] = horaString.split(':').map(Number);
