@@ -42,7 +42,7 @@ const obtenerAsistenciaMes = async (docenteId) => {
     };
 };
 
-// Login de Docentes
+// Login de Docentes (ACTUALIZADO: Super Populate y envío de Oferta Académica)
 export const loginDocente = async (req, res) => {
     const { username, password } = req.body;
     try {
@@ -54,7 +54,12 @@ export const loginDocente = async (req, res) => {
 
         const token = await createAccessToken({ id: docenteFound._id, role: 'docente' });
 
-        const ofertas = await OfertaAcademica.find({ docente: docenteFound._id }).populate('materia');
+        // 👇 1. Agregamos el deep populate para traer grupo y periodo
+        const ofertas = await OfertaAcademica.find({ docente: docenteFound._id })
+            .populate('materia')
+            .populate('grupo')
+            .populate('periodo');
+
         const materiasUnicas = [];
         const nombresAgregados = new Set();
         
@@ -78,6 +83,7 @@ export const loginDocente = async (req, res) => {
             qrCode: docenteFound.qrCode,
             role: 'docente',
             materias: materiasUnicas,
+            ofertaAcademica: ofertas, // 👇 2. ¡CRUCIAL! Enviamos las ofertas al frontend
             horasAcumuladas: datosAsistencia.horasAcumuladas,
             historialAsistencias: datosAsistencia.historialDetallado 
         });
@@ -87,7 +93,7 @@ export const loginDocente = async (req, res) => {
     }
 };
 
-// Crear nuevo Docente (ACTUALIZADO: Hereda las carreras del directivo)
+// Crear nuevo Docente
 export const crearDocente = async (req, res) => {
     try {
         const { 
@@ -102,7 +108,6 @@ export const crearDocente = async (req, res) => {
         const passwordHash = await bcrypt.hash(password, 10);
         const qrCodeImage = await QRCode.toDataURL(numeroEmpleado); 
         
-        // 👇 Extraemos las carreras del directivo que está haciendo el registro
         const carrerasAsignadas = req.user && req.user.carreras ? req.user.carreras : [];
         
         const nuevoDocente = new Docente({ 
@@ -111,7 +116,7 @@ export const crearDocente = async (req, res) => {
             pagoHoraMatutino, pagoHoraSabatino, pagoHoraLinea, 
             metodoPago, turno, 
             qrCode: qrCodeImage,
-            carreras: carrerasAsignadas // 👇 Asignamos las carreras al nuevo maestro
+            carreras: carrerasAsignadas
         });
         
         const docenteGuardado = await nuevoDocente.save();
@@ -122,7 +127,7 @@ export const crearDocente = async (req, res) => {
     }
 };
 
-// Verificar Token del Docente
+// Verificar Token del Docente (ACTUALIZADO: Super Populate y envío de Oferta Académica)
 export const verifyDocenteToken = async (req, res) => {
     const { token } = req.cookies;
     if (!token) return res.status(401).json({ message: "No autorizado" });
@@ -133,7 +138,12 @@ export const verifyDocenteToken = async (req, res) => {
         const docenteFound = await Docente.findById(user.id);
         if (!docenteFound) return res.status(401).json({ message: "No autorizado" });
 
-        const ofertas = await OfertaAcademica.find({ docente: docenteFound._id }).populate('materia');
+        // 👇 1. Agregamos el deep populate para traer grupo y periodo
+        const ofertas = await OfertaAcademica.find({ docente: docenteFound._id })
+            .populate('materia')
+            .populate('grupo')
+            .populate('periodo');
+
         const materiasUnicas = [];
         const nombresAgregados = new Set();
         
@@ -156,27 +166,23 @@ export const verifyDocenteToken = async (req, res) => {
             qrCode: docenteFound.qrCode, 
             role: 'docente',
             materias: materiasUnicas,
+            ofertaAcademica: ofertas, // 👇 2. ¡CRUCIAL! Enviamos las ofertas al frontend
             horasAcumuladas: datosAsistencia.horasAcumuladas,
             historialAsistencias: datosAsistencia.historialDetallado 
         });
     });
 };
 
-// Obtener Docentes (ACTUALIZADO: Filtro más eficiente directo al perfil)
+// Obtener Docentes
 export const obtenerDocentes = async (req, res) => {
     try {
-        // 1. Obtenemos las carreras permitidas para este directivo
         const carrerasDelDirectivo = req.user && req.user.carreras ? req.user.carreras : [];
-
-        // 2. Si el directivo no tiene carreras (admin general), trae todos. 
-        // Si tiene carreras, trae solo los docentes vinculados a ellas.
         const filtro = carrerasDelDirectivo.length > 0 
             ? { carreras: { $in: carrerasDelDirectivo } } 
             : {};
 
         const docentes = await Docente.find(filtro).lean();
         
-        // 3. Traemos las ofertas de estos docentes para mapear sus materias
         const idsDocentes = docentes.map(d => d._id);
         const ofertas = await OfertaAcademica.find({ docente: { $in: idsDocentes } })
             .populate('materia')
@@ -184,7 +190,6 @@ export const obtenerDocentes = async (req, res) => {
             .populate('periodo')
             .lean();
         
-        // 4. Mapeamos la data final
         const docentesConMaterias = docentes.map(docente => {
             const susOfertas = ofertas.filter(o => o.docente && o.docente.toString() === docente._id.toString());
             

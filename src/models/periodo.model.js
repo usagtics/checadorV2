@@ -5,7 +5,7 @@ const periodoSchema = new mongoose.Schema({
         type: String, 
         required: true, 
         trim: true,
-        unique: true // Para que no repitan "2026-1"
+        unique: true
     },
     fechaInicio: { type: Date },
     fechaFin: { type: Date },

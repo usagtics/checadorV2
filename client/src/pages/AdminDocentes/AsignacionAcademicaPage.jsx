@@ -232,6 +232,7 @@ export default function AsignacionAcademicaPage() {
                                             <option value="Matutino">Matutino</option>
                                             <option value="Sabatino">Sabatino</option>
                                             <option value="Virtual">Virtual</option>
+                                            <option value="Dominical">Dominical</option>
                                         </select>
                                     </div>
 

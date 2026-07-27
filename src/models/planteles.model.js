@@ -13,7 +13,6 @@ const plantelSchema = new mongoose.Schema({
     required: true,
     minlength: [5, 'La dirección debe tener al menos 5 caracteres.'],
   },
-  // 👇 NUEVO CAMPO: Array de strings para las IPs
   ipsPermitidas: {
     type: [String],
     default: [],
@@ -27,7 +26,6 @@ const plantelSchema = new mongoose.Schema({
   timestamps: true,
 });
 
-// Índice para búsquedas rápidas por nombre
 plantelSchema.index({ nombre: 1 });
 
 export default mongoose.model('Plantel', plantelSchema);

@@ -28,8 +28,8 @@ const ofertaAcademicaSchema = new mongoose.Schema({
             enum: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'],
             required: true
         },
-        horaInicio: { type: String, required: true }, // Formato "09:00"
-        horaFin: { type: String, required: true }     // Formato "10:00"
+        horaInicio: { type: String, required: true },
+        horaFin: { type: String, required: true }    
     }],
     periodo: { 
         type: mongoose.Schema.Types.ObjectId, 
