@@ -238,7 +238,8 @@ export const getNominaDetalle = async (req, res) => {
             }
         };
 
-        if (req.user && req.user.carreras && req.user.carreras.length > 0) {
+        // Respetamos al super-admin para que pueda ver la nómina completa
+        if (req.user && req.user.carreras && req.user.carreras.length > 0 && req.user.role !== 'super-admin') {
             const gruposPermitidos = await Grupo.find({ carrera: { $in: req.user.carreras } }).select('_id');
             const idsGruposPermitidos = gruposPermitidos.map(g => g._id);
             queryAsistencias.grupo = { $in: idsGruposPermitidos };
@@ -298,13 +299,36 @@ export const getNominaDetalle = async (req, res) => {
             }
 
             if (par.entrada && par.salida && par.salida > par.entrada) {
-                const horasTrabajadas = (par.salida - par.entrada) / (1000 * 60 * 60);
+                // 👇 CAMBIO AQUÍ: Usamos 'let' para poder topar las horas si se pasa del límite
+                let horasTrabajadas = (par.salida - par.entrada) / (1000 * 60 * 60);
                 
                 const oferta = await OfertaAcademica.findOne({
                     docente: par.docente._id,
                     materia: par.materia._id,
                     periodo: periodoActivo?._id
                 }).populate('grupo');
+
+                // 👇 NUEVA LÓGICA: TOPAR LAS HORAS A LA DURACIÓN OFICIAL DE LA CLASE 👇
+                if (oferta && oferta.horarios) {
+                    const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+                    const diaChecada = diasSemana[par.fechaFisica.getDay()];
+                    
+                    const horarioHoy = oferta.horarios.find(h => h.diaSemana === diaChecada);
+                    
+                    if (horarioHoy) {
+                        const [hIni, mIni] = horarioHoy.horaInicio.split(':').map(Number);
+                        const [hFin, mFin] = horarioHoy.horaFin.split(':').map(Number);
+                        
+                        // Calculamos cuánto dura la clase originalmente (Ej: 1.0 horas)
+                        const horasProgramadas = (hFin * 60 + mFin - (hIni * 60 + mIni)) / 60;
+
+                        // Si el maestro checó salida tarde, recortamos su pago a las horas programadas
+                        if (horasTrabajadas > horasProgramadas) {
+                            horasTrabajadas = horasProgramadas;
+                        }
+                    }
+                }
+                // 👆 FIN DE LA NUEVA LÓGICA 👆
 
                 let turnoClase = 'Matutino';
                 if (oferta) {
@@ -347,7 +371,6 @@ export const getNominaDetalle = async (req, res) => {
         res.status(500).json({ message: "Error al calcular nómina" });
     }
 };
-
 export const justificarAsistencia = async (req, res) => {
     try {
         const { id } = req.params; 
