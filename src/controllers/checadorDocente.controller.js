@@ -1,4 +1,3 @@
-
 import Docente from '../models/docentes.model.js';
 import OfertaAcademica from '../models/ofertaAcademica.model.js';
 import AsistenciaDocente from '../models/asistenciaDocente.model.js';
@@ -75,7 +74,6 @@ export const registrarAsistenciaQR = async (req, res) => {
         let materiaPorCerrar = null;
         let materiaPorAbrir = null;
 
-
         for (const oferta of clasesAsignadas) {
             const horariosHoy = oferta.horarios.filter(h => h.diaSemana === diaHoy);
             
@@ -117,7 +115,6 @@ export const registrarAsistenciaQR = async (req, res) => {
             const inicioClaseMinutos = convertirHoraAMinutos(horarioActual.horaInicio);
             let estatusCalculado = 'A tiempo';
             
-
             if (horaActualMinutos > (inicioClaseMinutos + 10)) estatusCalculado = 'Falta';
             else if (horaActualMinutos > (inicioClaseMinutos + 5)) estatusCalculado = 'Retardo';
 
@@ -157,22 +154,14 @@ export const registrarAsistenciaQR = async (req, res) => {
 export const obtenerTodasLasAsistencias = async (req, res) => {
     try {
         const periodoActivo = await Periodo.findOne({ activo: true });
-        
-        // --- 1. NUEVO CÓDIGO DE FILTRADO POR CARRERA ---
         let filtroAsistencias = {};
         
-        // Verificamos si el usuario de la petición tiene un arreglo de carreras asignadas
-        if (req.user && req.user.carreras && req.user.carreras.length > 0) {
-            // Buscamos todos los grupos que pertenezcan a las carreras permitidas
+        if (req.user && req.user.carreras && req.user.carreras.length > 0 && req.user.role !== 'super-admin') {
             const gruposPermitidos = await Grupo.find({ carrera: { $in: req.user.carreras } }).select('_id');
             const idsGruposPermitidos = gruposPermitidos.map(g => g._id);
-            
-            // Asignamos el filtro para buscar solo asistencias vinculadas a esos grupos
             filtroAsistencias = { grupo: { $in: idsGruposPermitidos } };
         }
-        // -----------------------------------------------
         
-        // 2. Pasamos el filtro a la búsqueda (si no hay carreras, filtroAsistencias estará vacío y traerá todo)
         const asistenciasBrutas = await AsistenciaDocente.find(filtroAsistencias)
             .populate('docente', 'nombre apellidos numeroEmpleado turno')
             .populate('materia', 'nombre')
@@ -184,14 +173,11 @@ export const obtenerTodasLasAsistencias = async (req, res) => {
 
         const asistenciasProcesadas = await Promise.all(asistenciasBrutas.map(async (asistencia) => {
             if (!asistencia.docente) return asistencia;
-
             const diaChecada = diasSemana[new Date(asistencia.fecha).getDay()];
-
             const queryOferta = { docente: asistencia.docente._id };
             if (periodoActivo) queryOferta.periodo = periodoActivo._id;
 
             const clases = await OfertaAcademica.find(queryOferta).populate('materia');
-            
             const materiasDelDia = [];
             clases.forEach(clase => {
                 const tieneClaseHoy = clase.horarios.some(h => h.diaSemana === diaChecada);
@@ -218,19 +204,11 @@ export const obtenerTodasLasAsistencias = async (req, res) => {
     }
 };
 
-const crearFechaConHora = (fechaBase, horaString) => {
-    const [horas, minutos] = horaString.split(':').map(Number);
-    const nuevaFecha = new Date(fechaBase);
-    nuevaFecha.setHours(horas, minutos, 0, 0);
-    return nuevaFecha;
-};
-
 export const getNominaDetalle = async (req, res) => {
     try {
         const { fechaInicio, fechaFin } = req.query;
         const periodoActivo = await Periodo.findOne({ activo: true });
         
-        // --- NUEVO: FILTRO DE SEGURIDAD POR CARRERA ---
         let queryAsistencias = {
             fecha: { 
                 $gte: new Date(`${fechaInicio}T00:00:00.000Z`), 
@@ -238,60 +216,39 @@ export const getNominaDetalle = async (req, res) => {
             }
         };
 
-        // Respetamos al super-admin para que pueda ver la nómina completa
         if (req.user && req.user.carreras && req.user.carreras.length > 0 && req.user.role !== 'super-admin') {
             const gruposPermitidos = await Grupo.find({ carrera: { $in: req.user.carreras } }).select('_id');
             const idsGruposPermitidos = gruposPermitidos.map(g => g._id);
             queryAsistencias.grupo = { $in: idsGruposPermitidos };
         }
-        // ----------------------------------------------
 
-        // 1. Traemos las asistencias aplicando el filtro
         const asistencias = await AsistenciaDocente.find(queryAsistencias)
             .populate('docente materia grupo').sort({ fecha: 1 });
 
         const emparejamiento = {};
         const nomina = {};
 
-        // 2. Agrupamos por Docente + Fecha + MATERIA
         asistencias.forEach(registro => {
             if (!registro.docente || !registro.materia) return;
             const docenteId = registro.docente._id.toString();
             const materiaId = registro.materia._id.toString();
             const fechaCorta = registro.fecha.toLocaleDateString('en-CA'); 
-            
             const llaveUnica = `${docenteId}_${fechaCorta}_${materiaId}`; 
 
             if (!emparejamiento[llaveUnica]) {
-                emparejamiento[llaveUnica] = { 
-                    entrada: null, 
-                    salida: null, 
-                    docente: registro.docente, 
-                    materia: registro.materia,
-                    grupo: registro.grupo,
-                    fechaFisica: registro.fecha,
-                    estatusList: []
-                };
+                emparejamiento[llaveUnica] = { entrada: null, salida: null, docente: registro.docente, materia: registro.materia, grupo: registro.grupo, fechaFisica: registro.fecha, estatusList: [] };
             }
-            if (registro.tipoRegistro === 'Entrada' && !emparejamiento[llaveUnica].entrada) {
-                emparejamiento[llaveUnica].entrada = registro.fecha;
-            }
-            if (registro.tipoRegistro === 'Salida') {
-                emparejamiento[llaveUnica].salida = registro.fecha;
-            }
-            if (registro.estatus === 'Retardo' || registro.estatus === 'Falta') {
-                emparejamiento[llaveUnica].estatusList.push(registro.estatus);
-            }
+            if (registro.tipoRegistro === 'Entrada' && !emparejamiento[llaveUnica].entrada) emparejamiento[llaveUnica].entrada = registro.fecha;
+            if (registro.tipoRegistro === 'Salida') emparejamiento[llaveUnica].salida = registro.fecha;
+            if (registro.estatus === 'Retardo' || registro.estatus === 'Falta') emparejamiento[llaveUnica].estatusList.push(registro.estatus);
         });
 
-        // 3. Calculamos el tiempo y CONSULTAMOS EL TURNO REAL
         for (const par of Object.values(emparejamiento)) {
             const docenteId = par.docente._id.toString();
-            
             if (!nomina[docenteId]) {
                 nomina[docenteId] = {
                     nombre: `${par.docente.nombre} ${par.docente.apellidos}`,
-                    horasSabatinas: 0, horasMatutinas: 0, horasLinea: 0,
+                    horasSabatinas: 0, horasDominicales: 0, horasMatutinas: 0, horasLinea: 0,
                     metodoPago: par.docente.metodoPago || "TARJETA",
                     total: 0,
                     incidencias: []
@@ -299,7 +256,6 @@ export const getNominaDetalle = async (req, res) => {
             }
 
             if (par.entrada && par.salida && par.salida > par.entrada) {
-                // 👇 CAMBIO AQUÍ: Usamos 'let' para poder topar las horas si se pasa del límite
                 let horasTrabajadas = (par.salida - par.entrada) / (1000 * 60 * 60);
                 
                 const oferta = await OfertaAcademica.findOne({
@@ -308,40 +264,31 @@ export const getNominaDetalle = async (req, res) => {
                     periodo: periodoActivo?._id
                 }).populate('grupo');
 
-                // 👇 NUEVA LÓGICA: TOPAR LAS HORAS A LA DURACIÓN OFICIAL DE LA CLASE 👇
                 if (oferta && oferta.horarios) {
                     const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
                     const diaChecada = diasSemana[par.fechaFisica.getDay()];
-                    
                     const horarioHoy = oferta.horarios.find(h => h.diaSemana === diaChecada);
                     
                     if (horarioHoy) {
                         const [hIni, mIni] = horarioHoy.horaInicio.split(':').map(Number);
                         const [hFin, mFin] = horarioHoy.horaFin.split(':').map(Number);
-                        
-                        // Calculamos cuánto dura la clase originalmente (Ej: 1.0 horas)
                         const horasProgramadas = (hFin * 60 + mFin - (hIni * 60 + mIni)) / 60;
-
-                        // Si el maestro checó salida tarde, recortamos su pago a las horas programadas
-                        if (horasTrabajadas > horasProgramadas) {
-                            horasTrabajadas = horasProgramadas;
-                        }
+                        if (horasTrabajadas > horasProgramadas) horasTrabajadas = horasProgramadas;
                     }
                 }
-                // 👆 FIN DE LA NUEVA LÓGICA 👆
 
                 let turnoClase = 'Matutino';
-                if (oferta) {
-                    turnoClase = oferta.turno || oferta.grupo?.turno || par.docente.turno || 'Matutino';
-                } else {
-                    turnoClase = par.grupo?.turno || par.docente.turno || 'Matutino';
-                }
+                if (oferta) turnoClase = oferta.turno || oferta.grupo?.turno || par.docente.turno || 'Matutino';
+                else turnoClase = par.grupo?.turno || par.docente.turno || 'Matutino';
                 
                 const turnoLimpio = turnoClase.toUpperCase();
 
                 if (turnoLimpio === 'SABATINO') {
                     nomina[docenteId].horasSabatinas += horasTrabajadas;
                     nomina[docenteId].total += (horasTrabajadas * (par.docente.pagoHoraSabatino || 200));
+                } else if (turnoLimpio === 'DOMINICAL') {
+                    nomina[docenteId].horasDominicales += horasTrabajadas;
+                    nomina[docenteId].total += (horasTrabajadas * (par.docente.pagoHoraDominical || par.docente.pagoHoraSabatino || 200));
                 } else if (turnoLimpio === 'LÍNEA' || turnoLimpio === 'LINEA' || turnoLimpio === 'VIRTUAL') {
                     nomina[docenteId].horasLinea += horasTrabajadas;
                     nomina[docenteId].total += (horasTrabajadas * (par.docente.pagoHoraLinea || 250));
@@ -350,50 +297,31 @@ export const getNominaDetalle = async (req, res) => {
                     nomina[docenteId].total += (horasTrabajadas * (par.docente.pagoHoraMatutino || 200));
                 }
             }
-
             par.estatusList.forEach(est => {
                 const desc = `${est} en ${par.materia.nombre || 'Clase'}`;
-                if (!nomina[docenteId].incidencias.includes(desc)) {
-                    nomina[docenteId].incidencias.push(desc);
-                }
+                if (!nomina[docenteId].incidencias.includes(desc)) nomina[docenteId].incidencias.push(desc);
             });
         }
 
-        // 4. Formateo final
-        const resultadoFinal = Object.values(nomina).map(doc => ({
-            ...doc,
-            incidencias: doc.incidencias.join(', ')
-        }));
-
+        const resultadoFinal = Object.values(nomina).map(doc => ({ ...doc, incidencias: doc.incidencias.join(', ') }));
         res.json(resultadoFinal);
     } catch (error) {
         console.error("Error al calcular nómina:", error);
         res.status(500).json({ message: "Error al calcular nómina" });
     }
 };
+
 export const justificarAsistencia = async (req, res) => {
     try {
         const { id } = req.params; 
         const { motivo } = req.body; 
-
         const asistenciaActualizada = await AsistenciaDocente.findByIdAndUpdate(
             id,
-            { 
-                estatus: 'Justificado',
-                motivoJustificacion: motivo || 'Sin motivo especificado'
-            },
+            { estatus: 'Justificado', motivoJustificacion: motivo || 'Sin motivo especificado' },
             { new: true }
         );
-
-        if (!asistenciaActualizada) {
-            return res.status(404).json({ message: "No se encontró el registro de asistencia." });
-        }
-
-        res.status(200).json({ 
-            message: "Registro justificado exitosamente.",
-            asistencia: asistenciaActualizada 
-        });
-
+        if (!asistenciaActualizada) return res.status(404).json({ message: "No se encontró el registro de asistencia." });
+        res.status(200).json({ message: "Registro justificado exitosamente.", asistencia: asistenciaActualizada });
     } catch (error) {
         console.error("Error al justificar:", error);
         res.status(500).json({ message: "Error interno al justificar el registro." });
@@ -404,18 +332,12 @@ export const getDesgloseDia = async (req, res) => {
     try {
         const { docenteId } = req.params;
         const { fecha } = req.query; 
-
         const fechaInicio = new Date(`${fecha}T00:00:00.000Z`);
         const fechaFin = new Date(`${fecha}T23:59:59.999Z`);
-        
-        const asistencias = await AsistenciaDocente.find({
-            docente: docenteId,
-            fecha: { $gte: fechaInicio, $lte: fechaFin }
-        }).sort({ fecha: 1 });
+        const asistencias = await AsistenciaDocente.find({ docente: docenteId, fecha: { $gte: fechaInicio, $lte: fechaFin } }).sort({ fecha: 1 });
 
         let entradaReal = null;
         let salidaReal = null;
-
         asistencias.forEach(a => {
             if (a.tipoRegistro === 'Entrada' && !entradaReal) entradaReal = a.fecha;
             if (a.tipoRegistro === 'Salida') salidaReal = a.fecha;
@@ -424,14 +346,11 @@ export const getDesgloseDia = async (req, res) => {
         const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
         const fechaObj = new Date(`${fecha}T12:00:00.000Z`); 
         const diaDeLaSemana = diasSemana[fechaObj.getDay()];
-
-        // FILTRAMOS POR PERIODO ACTIVO (Si existe)
         const periodoActivo = await Periodo.findOne({ activo: true });
         const queryOferta = { docente: docenteId };
         if (periodoActivo) queryOferta.periodo = periodoActivo._id;
 
         const ofertas = await OfertaAcademica.find(queryOferta).populate('materia');
-        
         let clasesDelDia = [];
         ofertas.forEach(oferta => {
             const horarioHoy = oferta.horarios.find(h => h.diaSemana === diaDeLaSemana);
@@ -447,91 +366,59 @@ export const getDesgloseDia = async (req, res) => {
         });
 
         clasesDelDia.sort((a, b) => a.inicioMin - b.inicioMin);
-
         const cronograma = [];
         let totalHoras = 0;
         let ultimaHoraFin = null;
 
         for (let i = 0; i < clasesDelDia.length; i++) {
             const clase = clasesDelDia[i];
-
             if (ultimaHoraFin !== null && ultimaHoraFin < clase.inicioMin) {
                 const hFinH = Math.floor(ultimaHoraFin / 60).toString().padStart(2, '0');
                 const mFinH = (ultimaHoraFin % 60).toString().padStart(2, '0');
                 const hIniH = Math.floor(clase.inicioMin / 60).toString().padStart(2, '0');
                 const mIniH = (clase.inicioMin % 60).toString().padStart(2, '0');
-                
-                cronograma.push({
-                    tipo: 'hueco',
-                    materia: 'Tiempo Libre',
-                    horario: `${hFinH}:${mFinH} - ${hIniH}:${mIniH}`,
-                    status: 'No pagada'
-                });
+                cronograma.push({ tipo: 'hueco', materia: 'Tiempo Libre', horario: `${hFinH}:${mFinH} - ${hIniH}:${mIniH}`, status: 'No pagada' });
             }
-
             const [hIni, mIni] = clase.horaInicio.split(':');
             const [hFin, mFin] = clase.horaFin.split(':');
-            
             const claseInicioDate = new Date(fechaObj);
             claseInicioDate.setHours(parseInt(hIni), parseInt(mIni), 0, 0);
-            
             const claseFinDate = new Date(fechaObj);
             claseFinDate.setHours(parseInt(hFin), parseInt(mFin), 0, 0);
-
             const toleranciaEntrada = new Date(claseInicioDate.getTime() + (30 * 60000));
-            
             const claseCubierta = (entradaReal && salidaReal && entradaReal <= toleranciaEntrada && salidaReal >= claseFinDate);
-
             if (claseCubierta) {
                 const horasClase = (clase.finMin - clase.inicioMin) / 60;
                 totalHoras += horasClase;
             }
-
-            cronograma.push({
-                tipo: 'clase',
-                materia: clase.materia,
-                horario: `${clase.horaInicio} - ${clase.horaFin}`,
-                status: claseCubierta ? 'Pagada' : 'No pagada'
-            });
-
+            cronograma.push({ tipo: 'clase', materia: clase.materia, horario: `${clase.horaInicio} - ${clase.horaFin}`, status: claseCubierta ? 'Pagada' : 'No pagada' });
             ultimaHoraFin = clase.finMin;
         }
 
-        res.status(200).json({
-            cronograma,
-            totalHoras: totalHoras.toFixed(1)
-        });
-
+        res.status(200).json({ cronograma, totalHoras: totalHoras.toFixed(1) });
     } catch (error) {
         console.error("Error al armar desglose:", error);
         res.status(500).json({ message: "Error interno" });
     }
 };
+
 export const getCumplimientoDocente = async (req, res) => {
     try {
         const periodoActivo = await Periodo.findOne({ activo: true });
-        
-        // --- NUEVO: FILTRO DE SEGURIDAD POR CARRERA ---
         let queryDocentes = {};
-        if (req.user && req.user.carreras && req.user.carreras.length > 0) {
-            // Buscamos grupos permitidos
+        
+        if (req.user && req.user.carreras && req.user.carreras.length > 0 && req.user.role !== 'super-admin') {
             const gruposPermitidos = await Grupo.find({ carrera: { $in: req.user.carreras } }).select('_id');
             const idsGrupos = gruposPermitidos.map(g => g._id);
-            
-            // Buscamos a los maestros que dan clases en esos grupos
             const ofertas = await OfertaAcademica.find({ grupo: { $in: idsGrupos } }).select('docente');
             const idsDocentes = [...new Set(ofertas.map(o => o.docente.toString()))];
-            
             queryDocentes = { _id: { $in: idsDocentes } };
         }
-        // ----------------------------------------------
 
-        // Ejecutamos la búsqueda de docentes con o sin filtro según corresponda
         const docentes = await Docente.find(queryDocentes);
         const reporteCumplimiento = [];
 
         for (const doc of docentes) {
-            // A. Horas Asignadas (Programadas)
             const ofertas = await OfertaAcademica.find({ docente: doc._id, periodo: periodoActivo._id });
             let horasProgramadas = 0;
             ofertas.forEach(o => {
@@ -544,11 +431,8 @@ export const getCumplimientoDocente = async (req, res) => {
 
             const unaSemanaAtras = new Date();
             unaSemanaAtras.setDate(unaSemanaAtras.getDate() - 7);
-            
-            // B. Horas reales basándonos en sus checadas (puedes agregar la lógica que sume las horas reales aquí)
             const asistencias = await AsistenciaDocente.find({ docente: doc._id, fecha: { $gte: unaSemanaAtras } });
-            
-            let horasReales = 0; // (La suma real dependerá de la lógica que definas, actualmente está en 0)
+            let horasReales = 0; 
             
             reporteCumplimiento.push({
                 nombre: `${doc.nombre} ${doc.apellidos}`,
