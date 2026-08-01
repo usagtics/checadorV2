@@ -153,15 +153,16 @@ export const registrarAsistenciaQR = async (req, res) => {
 
 export const obtenerTodasLasAsistencias = async (req, res) => {
     try {
-        const periodoActivo = await Periodo.findOne({ activo: true });
         let filtroAsistencias = {};
         
+        // Filtro de seguridad por carreras para coordinadores
         if (req.user && req.user.carreras && req.user.carreras.length > 0 && req.user.role !== 'super-admin') {
             const gruposPermitidos = await Grupo.find({ carrera: { $in: req.user.carreras } }).select('_id');
             const idsGruposPermitidos = gruposPermitidos.map(g => g._id);
             filtroAsistencias = { grupo: { $in: idsGruposPermitidos } };
         }
         
+        // Traemos las asistencias con la materia EXACTA en la que checó
         const asistenciasBrutas = await AsistenciaDocente.find(filtroAsistencias)
             .populate('docente', 'nombre apellidos numeroEmpleado turno')
             .populate('materia', 'nombre')
@@ -169,35 +170,9 @@ export const obtenerTodasLasAsistencias = async (req, res) => {
             .sort({ fecha: -1 })
             .lean(); 
 
-        const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-
-        const asistenciasProcesadas = await Promise.all(asistenciasBrutas.map(async (asistencia) => {
-            if (!asistencia.docente) return asistencia;
-            const diaChecada = diasSemana[new Date(asistencia.fecha).getDay()];
-            const queryOferta = { docente: asistencia.docente._id };
-            if (periodoActivo) queryOferta.periodo = periodoActivo._id;
-
-            const clases = await OfertaAcademica.find(queryOferta).populate('materia');
-            const materiasDelDia = [];
-            clases.forEach(clase => {
-                const tieneClaseHoy = clase.horarios.some(h => h.diaSemana === diaChecada);
-                if (tieneClaseHoy && clase.materia && clase.materia.nombre) {
-                    materiasDelDia.push(clase.materia.nombre);
-                }
-            });
-
-            const materiasUnicas = [...new Set(materiasDelDia)].join(' / ');
-
-            return {
-                ...asistencia,
-                materia: {
-                    ...asistencia.materia,
-                    nombre: materiasUnicas || (asistencia.materia?.nombre || 'Jornada')
-                }
-            };
-        }));
-
-        res.status(200).json(asistenciasProcesadas);
+        // Enviamos los datos directos y limpios al frontend
+        res.status(200).json(asistenciasBrutas);
+        
     } catch (error) {
         console.error("Error al obtener el reporte de checadas:", error);
         res.status(500).json({ message: 'Error interno al obtener las asistencias.' });
