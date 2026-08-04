@@ -313,6 +313,7 @@ export const getNominaDetalle = async (req, res) => {
         }
 
         const formatearMinutosAHoras = (totalMinutos) => {
+            if (!totalMinutos || isNaN(totalMinutos)) return '0 hr';
             const horas = Math.floor(totalMinutos / 60);
             const minutos = totalMinutos % 60;
             if (horas === 0) return `${minutos} min`;
@@ -326,7 +327,7 @@ export const getNominaDetalle = async (req, res) => {
             horasDominicales: formatearMinutosAHoras(doc.minutosDominicales),
             horasMatutinas: formatearMinutosAHoras(doc.minutosMatutinos),
             horasLinea: formatearMinutosAHoras(doc.minutosLinea),
-            total: Number(doc.total.toFixed(2)), // 👈 Se envía como número seguro para el frontend
+            total: Number(doc.total.toFixed(2)),
             incidencias: doc.incidencias.join(', ')
         }));
 
