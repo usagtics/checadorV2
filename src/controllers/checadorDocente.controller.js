@@ -267,7 +267,6 @@ export const getNominaDetalle = async (req, res) => {
                         const salidaEfectiva = new Date(Math.min(par.salida.getTime(), finOficial.getTime()));
 
                         if (salidaEfectiva > entradaEfectiva) {
-                            // Calculamos en minutos exactos y redondeamos para evitar decimales extraños
                             minutosTrabajados = Math.round((salidaEfectiva - entradaEfectiva) / (1000 * 60));
                         }
                     }
@@ -281,7 +280,6 @@ export const getNominaDetalle = async (req, res) => {
                 
                 const turnoLimpio = turnoClase.toUpperCase();
 
-                // Calculamos el dinero exacto por minuto trabajado (Pago por hora / 60)
                 if (turnoLimpio === 'SABATINO') {
                     nomina[docenteId].minutosSabatinos += minutosTrabajados;
                     const pagoHora = par.docente.pagoHoraSabatino || 200;
@@ -314,7 +312,6 @@ export const getNominaDetalle = async (req, res) => {
             }
         }
 
-        // Función auxiliar para formatear los minutos a texto limpio (Ej: "4 hr 30 min")
         const formatearMinutosAHoras = (totalMinutos) => {
             const horas = Math.floor(totalMinutos / 60);
             const minutos = totalMinutos % 60;
@@ -329,7 +326,7 @@ export const getNominaDetalle = async (req, res) => {
             horasDominicales: formatearMinutosAHoras(doc.minutosDominicales),
             horasMatutinas: formatearMinutosAHoras(doc.minutosMatutinos),
             horasLinea: formatearMinutosAHoras(doc.minutosLinea),
-            total: `$${doc.total.toFixed(2)}`, // Redondeo exacto a 2 decimales para dinero
+            total: Number(doc.total.toFixed(2)), // 👈 Se envía como número seguro para el frontend
             incidencias: doc.incidencias.join(', ')
         }));
 
