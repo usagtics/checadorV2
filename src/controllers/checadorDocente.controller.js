@@ -30,8 +30,8 @@ export const registrarAsistenciaQR = async (req, res) => {
             if(!stringDesencriptado) throw new Error("Fallo al desencriptar");
 
             const datosQR = JSON.parse(stringDesencriptado);
-            const horaActual = Date.now();
-            const diferenciaSegundos = (horaActual - datosQR.timestamp) / 1000;
+            const horaActualToken = Date.now();
+            const diferenciaSegundos = (horaActualToken - datosQR.timestamp) / 1000;
 
             if (diferenciaSegundos > 30) {
                 return res.status(403).json({ message: '⛔ Código QR expirado.' });
@@ -63,6 +63,18 @@ export const registrarAsistenciaQR = async (req, res) => {
             docente: docente._id,
             fecha: { $gte: inicioDia, $lte: finDia }
         }).sort({ fecha: -1 });
+
+        if (checadasHoy.length > 0) {
+            const ultimaChecadaGlobal = checadasHoy[0];
+            const segundosDesdeUltimaChecada = (fechaActual.getTime() - ultimaChecadaGlobal.fecha.getTime()) / 1000;
+            
+            if (segundosDesdeUltimaChecada < 60) {
+                return res.status(429).json({ 
+                    message: `Procesando registro. Por favor, espera ${Math.ceil(60 - segundosDesdeUltimaChecada)} segundos antes de volver a escanear.` 
+                });
+            }
+        }
+        
 
         const clasesAsignadas = await OfertaAcademica.find({ 
             docente: docente._id,
@@ -155,14 +167,12 @@ export const obtenerTodasLasAsistencias = async (req, res) => {
     try {
         let filtroAsistencias = {};
         
-        // Filtro de seguridad por carreras para coordinadores
         if (req.user && req.user.carreras && req.user.carreras.length > 0 && req.user.role !== 'super-admin') {
             const gruposPermitidos = await Grupo.find({ carrera: { $in: req.user.carreras } }).select('_id');
             const idsGruposPermitidos = gruposPermitidos.map(g => g._id);
             filtroAsistencias = { grupo: { $in: idsGruposPermitidos } };
         }
         
-        // Traemos las asistencias con la materia EXACTA en la que checó
         const asistenciasBrutas = await AsistenciaDocente.find(filtroAsistencias)
             .populate('docente', 'nombre apellidos numeroEmpleado turno')
             .populate('materia', 'nombre')
@@ -170,7 +180,6 @@ export const obtenerTodasLasAsistencias = async (req, res) => {
             .sort({ fecha: -1 })
             .lean(); 
 
-        // Enviamos los datos directos y limpios al frontend
         res.status(200).json(asistenciasBrutas);
         
     } catch (error) {
@@ -231,7 +240,7 @@ export const getNominaDetalle = async (req, res) => {
             }
 
             if (par.entrada && par.salida && par.salida > par.entrada) {
-                let horasTrabajadas = (par.salida - par.entrada) / (1000 * 60 * 60);
+                let horasTrabajadas = 0; 
                 
                 const oferta = await OfertaAcademica.findOne({
                     docente: par.docente._id,
@@ -247,9 +256,22 @@ export const getNominaDetalle = async (req, res) => {
                     if (horarioHoy) {
                         const [hIni, mIni] = horarioHoy.horaInicio.split(':').map(Number);
                         const [hFin, mFin] = horarioHoy.horaFin.split(':').map(Number);
-                        const horasProgramadas = (hFin * 60 + mFin - (hIni * 60 + mIni)) / 60;
-                        if (horasTrabajadas > horasProgramadas) horasTrabajadas = horasProgramadas;
+                        
+                        const inicioOficial = new Date(par.fechaFisica);
+                        inicioOficial.setHours(hIni, mIni, 0, 0);
+                        
+                        const finOficial = new Date(par.fechaFisica);
+                        finOficial.setHours(hFin, mFin, 0, 0);
+
+                        const entradaEfectiva = new Date(Math.max(par.entrada.getTime(), inicioOficial.getTime()));
+                        const salidaEfectiva = new Date(Math.min(par.salida.getTime(), finOficial.getTime()));
+
+                        if (salidaEfectiva > entradaEfectiva) {
+                            horasTrabajadas = (salidaEfectiva - entradaEfectiva) / (1000 * 60 * 60);
+                        }
                     }
+                } else {
+                    horasTrabajadas = (par.salida - par.entrada) / (1000 * 60 * 60);
                 }
 
                 let turnoClase = 'Matutino';
@@ -272,10 +294,19 @@ export const getNominaDetalle = async (req, res) => {
                     nomina[docenteId].total += (horasTrabajadas * (par.docente.pagoHoraMatutino || 200));
                 }
             }
+
             par.estatusList.forEach(est => {
                 const desc = `${est} en ${par.materia.nombre || 'Clase'}`;
                 if (!nomina[docenteId].incidencias.includes(desc)) nomina[docenteId].incidencias.push(desc);
             });
+
+            // 🚨 NUEVA REGLA: Detectar la Omisión de Salida
+            if (par.entrada && !par.salida) {
+                const descOmision = `Omisión de salida en ${par.materia.nombre || 'Clase'}`;
+                if (!nomina[docenteId].incidencias.includes(descOmision)) {
+                    nomina[docenteId].incidencias.push(descOmision);
+                }
+            }
         }
 
         const resultadoFinal = Object.values(nomina).map(doc => ({ ...doc, incidencias: doc.incidencias.join(', ') }));

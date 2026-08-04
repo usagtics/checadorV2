@@ -1,18 +1,48 @@
-
 import React, { useEffect, useState } from 'react';
 import { useChecadasDocente } from '../../context/checadasDocenteContext'; 
 import { Link } from 'react-router-dom';
 import MenuDocentes from '../../menu/MenuDocentes';
 import axios from 'axios'; 
 
+// FUNCIÓN PARA OBTENER LA ETIQUETA DE LA SEMANA
+const obtenerEtiquetaSemana = (fechaString) => {
+    const fecha = new Date(fechaString);
+    const dia = fecha.getDay(); 
+    const diasARestar = dia === 0 ? 6 : dia - 1; 
+
+    const lunes = new Date(fecha);
+    lunes.setDate(fecha.getDate() - diasARestar);
+
+    const domingo = new Date(lunes);
+    domingo.setDate(lunes.getDate() + 6);
+
+    const options = { day: 'numeric', month: 'short' };
+    return `Semana del ${lunes.toLocaleDateString('es-MX', options)} al ${domingo.toLocaleDateString('es-MX', options)}`;
+};
+
+const obtenerDiaLegible = (fechaString) => {
+    const fecha = new Date(fechaString);
+    const hoy = new Date();
+    const ayer = new Date(hoy);
+    ayer.setDate(ayer.getDate() - 1);
+
+    if (fecha.toDateString() === hoy.toDateString()) return "HOY";
+    if (fecha.toDateString() === ayer.toDateString()) return "AYER";
+    
+    const diaSemana = fecha.toLocaleDateString('es-MX', { weekday: 'long' });
+    return diaSemana.charAt(0).toUpperCase() + diaSemana.slice(1); 
+};
+
 const ReporteAsistenciaDocentesPage = () => {
   const { checadas, getChecadas, cargando, justificarAsistencia } = useChecadasDocente();
   
-  // ESTADOS DE LOS FILTROS
   const [busqueda, setBusqueda] = useState('');
   const [filtroEstatus, setFiltroEstatus] = useState('');
   const [filtroFecha, setFiltroFecha] = useState('');
   
+  const [paginaActual, setPaginaActual] = useState(1);
+  const docentesPorPagina = 5;
+
   const [procesandoId, setProcesandoId] = useState(null);
 
   const [modalAbierto, setModalAbierto] = useState(false);
@@ -26,7 +56,10 @@ const ReporteAsistenciaDocentesPage = () => {
     getChecadas();
   }, []);
 
-  // LÓGICA DE FILTRADO MÚLTIPLE
+  useEffect(() => {
+      setPaginaActual(1);
+  }, [busqueda, filtroEstatus, filtroFecha]);
+
   const checadasFiltradas = checadas?.filter((checada) => {
     let coincideTexto = true;
     if (busqueda) {
@@ -55,28 +88,43 @@ const ReporteAsistenciaDocentesPage = () => {
     return coincideTexto && coincideEstatus && coincideFecha;
   });
 
-  // AGRUPACIÓN POR DOCENTE (Para vista tipo reporte)
   const checadasAgrupadas = checadasFiltradas?.reduce((grupos, checada) => {
       const docenteId = checada.docente?._id || 'desconocido';
+      const etiquetaSemana = obtenerEtiquetaSemana(checada.fecha);
+
       if (!grupos[docenteId]) {
           grupos[docenteId] = {
               docente: checada.docente,
-              registros: []
+              registrosTotales: [], 
+              semanas: {} 
           };
       }
-      grupos[docenteId].registros.push(checada);
+
+      if (!grupos[docenteId].semanas[etiquetaSemana]) {
+          grupos[docenteId].semanas[etiquetaSemana] = [];
+      }
+
+      grupos[docenteId].semanas[etiquetaSemana].push(checada);
+      grupos[docenteId].registrosTotales.push(checada);
+      
       return grupos;
   }, {});
 
-  // NUEVO: LÓGICA DEL SEMÁFORO DE CUMPLIMIENTO
+  const gruposArray = Object.values(checadasAgrupadas || {});
+  const totalPaginas = Math.ceil(gruposArray.length / docentesPorPagina);
+  const gruposPaginados = gruposArray.slice(
+      (paginaActual - 1) * docentesPorPagina, 
+      paginaActual * docentesPorPagina
+  );
+
   const calcularSemaforo = (registros) => {
       if (!registros || registros.length === 0) return 'bg-gray-300';
       const registrosValidos = registros.filter(r => r.estatus === 'A tiempo' || r.estatus === 'Justificado').length;
       const porcentaje = (registrosValidos / registros.length) * 100;
       
-      if (porcentaje >= 90) return 'bg-emerald-500'; // Óptimo
-      if (porcentaje >= 70) return 'bg-amber-400';   // Alerta
-      return 'bg-red-500';                           // Crítico
+      if (porcentaje >= 90) return 'bg-emerald-500'; 
+      if (porcentaje >= 70) return 'bg-amber-400';   
+      return 'bg-red-500';                           
   };
 
   const totalRegistros = checadasFiltradas?.length || 0;
@@ -117,7 +165,9 @@ const ReporteAsistenciaDocentesPage = () => {
 
           const docenteId = checada.docente._id;
           
-          const response = await axios.get(`http://localhost:4000/api/asistencias/desglose/${docenteId}?fecha=${fechaCorta}`, {
+          const baseURL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
+          
+          const response = await axios.get(`${baseURL}/api/asistencias/desglose/${docenteId}?fecha=${fechaCorta}`, {
               withCredentials: true 
           });          
           
@@ -152,7 +202,6 @@ const ReporteAsistenciaDocentesPage = () => {
               </div>
               <p className="text-gray-500 text-sm font-medium mt-2 ml-4 mb-2">Supervisión agrupada de entradas y salidas por docente.</p>
               
-              {/* LEYENDA DEL SEMÁFORO */}
               <div className="flex items-center gap-4 text-[10px] font-black text-gray-400 uppercase tracking-widest ml-4 mt-3">
                   <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm border border-white"></span> Óptimo</div>
                   <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-sm border border-white"></span> Alerta</div>
@@ -207,9 +256,7 @@ const ReporteAsistenciaDocentesPage = () => {
               </div>
           </div>
 
-          {/* BARRA DE FILTROS MÚLTIPLES */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-6 flex flex-col md:flex-row gap-4">
-            
             <div className="relative flex-1">
               <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-gray-400">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
@@ -251,7 +298,7 @@ const ReporteAsistenciaDocentesPage = () => {
 
             {(busqueda || filtroEstatus || filtroFecha) && (
                 <button 
-                    onClick={() => { setBusqueda(''); setFiltroEstatus(''); setFiltroFecha(''); }}
+                    onClick={() => { setBusqueda(''); setFiltroEstatus(''); setFiltroFecha(''); setPaginaActual(1); }}
                     className="px-4 py-3 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl font-bold text-sm transition-colors border border-red-100 flex items-center justify-center"
                     title="Limpiar todos los filtros"
                 >
@@ -260,29 +307,25 @@ const ReporteAsistenciaDocentesPage = () => {
             )}
           </div>
 
-          {/* ÁREA DE RESULTADOS TIPO REPORTE AGRUPADO */}
-          <div className="space-y-6 pb-10">
+          <div className="space-y-6 pb-4">
             {cargando ? (
                 <div className="bg-white p-10 rounded-[2rem] shadow-sm text-center border border-gray-100">
                     <div className="inline-block w-8 h-8 border-4 border-blue-200 border-t-blue-900 rounded-full animate-spin mb-2"></div>
-                    <p className="text-gray-500 font-bold text-sm">Sincronizando reloj checador...</p>
+                    <p className="text-gray-500 font-bold text-sm">Cargando registros...</p>
                 </div>
-            ) : Object.keys(checadasAgrupadas || {}).length > 0 ? (
-                Object.values(checadasAgrupadas).map((grupo, index) => (
+            ) : gruposPaginados.length > 0 ? (
+                gruposPaginados.map((grupo, index) => (
                     <div key={index} className="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden relative">
                         
-                        {/* INDICADOR DE SEMÁFORO LATERAL */}
-                        <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${calcularSemaforo(grupo.registros)} z-10`}></div>
+                        <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${calcularSemaforo(grupo.registrosTotales)} z-10`}></div>
 
-                        {/* Cabecera del Docente */}
                         <div className="bg-blue-50/40 px-8 py-4 border-b border-gray-100 flex items-center justify-between">
                             <div className="flex items-center gap-4">
                                 <div className="relative">
                                     <div className="w-12 h-12 rounded-full bg-white text-blue-900 flex items-center justify-center font-black text-lg border border-gray-200 shadow-sm">
                                         {grupo.docente?.nombre?.charAt(0) || 'U'}
                                     </div>
-                                    {/* PUNTO DE SEMÁFORO EN EL AVATAR */}
-                                    <span className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-white shadow-sm ${calcularSemaforo(grupo.registros)}`}></span>
+                                    <span className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-white shadow-sm ${calcularSemaforo(grupo.registrosTotales)}`}></span>
                                 </div>
                                 <div>
                                     <h3 className="text-lg font-black text-gray-900">{grupo.docente?.nombre} {grupo.docente?.apellidos}</h3>
@@ -291,11 +334,10 @@ const ReporteAsistenciaDocentesPage = () => {
                             </div>
                             <div className="text-right hidden md:block">
                                 <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Total de Registros</p>
-                                <p className="text-lg font-black text-blue-600">{grupo.registros.length}</p>
+                                <p className="text-lg font-black text-blue-600">{grupo.registrosTotales.length}</p>
                             </div>
                         </div>
 
-                        {/* Tabla interna de registros del Docente */}
                         <div className="overflow-x-auto pl-2">
                             <table className="w-full text-left border-collapse min-w-[800px]">
                                 <thead>
@@ -307,77 +349,117 @@ const ReporteAsistenciaDocentesPage = () => {
                                         <th className="px-6 py-3 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Acciones</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-50">
-                                    {grupo.registros.map((checada, idx) => (
-                                        <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 bg-gray-50 rounded-xl flex flex-col items-center justify-center border border-gray-100">
-                                                        <span className="text-[9px] font-black text-gray-400 uppercase leading-none">{new Date(checada.fecha).toLocaleDateString('es-MX', { month: 'short' })}</span>
-                                                        <span className="text-sm font-black text-gray-900 leading-none">{new Date(checada.fecha).getDate()}</span>
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-sm font-bold text-gray-900">{new Date(checada.fecha).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true })}</p>
-                                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{new Date(checada.fecha).toLocaleDateString('es-MX', { weekday: 'short' })}</p>
-                                                    </div>
-                                                </div>
-                                            </td>
-
-                                            <td className="px-6 py-4">
-                                                <span className="text-sm font-bold text-gray-700 truncate max-w-[200px] block" title={checada.materia?.nombre || 'General'}>
-                                                    {checada.materia?.nombre || 'Clase General'}
-                                                </span>
-                                            </td>
-
-                                            <td className="px-6 py-4 text-center">
-                                                {checada.tipoRegistro === 'Entrada' ? (
-                                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-indigo-50 text-indigo-700 text-[10px] font-black uppercase tracking-wider border border-indigo-100">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clipRule="evenodd" /></svg>
-                                                        Entrada
-                                                    </span>
-                                                ) : (
-                                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-orange-50 text-orange-700 text-[10px] font-black uppercase tracking-wider border border-orange-100">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm7.707-3.293a1 1 0 010-1.414L13.586 9H7a1 1 0 110-2h6.586l-2.879-2.879a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>
-                                                        Salida
-                                                    </span>
-                                                )}
-                                            </td>
-
-                                            <td className="px-6 py-4 text-center">
-                                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
-                                                    checada.estatus === 'A tiempo' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                                                    checada.estatus === 'Retardo' ? 'bg-amber-50 text-amber-700 border-amber-100' :
-                                                    checada.estatus === 'Justificado' ? 'bg-purple-50 text-purple-700 border-purple-100' :
-                                                    'bg-red-50 text-red-700 border-red-100'
-                                                }`}>
-                                                    {checada.estatus}
-                                                </span>
-                                            </td>
-                                            
-                                            <td className="px-6 py-4 text-center">
-                                                <div className="flex items-center justify-center gap-2">
-                                                    <button
-                                                        onClick={() => abrirDetalleDia(checada)}
-                                                        className="bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-[10px] uppercase tracking-widest px-3 py-2 rounded-xl transition-all border border-blue-100"
-                                                        title="Ver línea de tiempo"
-                                                    >
-                                                        Detalle
-                                                    </button>
-
-                                                    {(checada.estatus === 'Retardo' || checada.estatus === 'Falta') && (
-                                                        <button
-                                                            onClick={() => abrirModalJustificar(checada._id)}
-                                                            disabled={procesandoId === checada._id}
-                                                            className="bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold text-[10px] uppercase tracking-widest px-3 py-2 rounded-xl transition-all disabled:opacity-50"
-                                                        >
-                                                            Justificar
-                                                        </button>
-                                                    )}
-                                                </div>
+                                
+                                {Object.entries(grupo.semanas).map(([semana, registrosSemana], secIdx) => (
+                                    <tbody key={secIdx} className="divide-y divide-gray-50">
+                                        <tr>
+                                            <td colSpan="5" className="px-6 py-2.5 bg-gray-50/80 text-[10px] font-black text-blue-900 uppercase tracking-widest border-y border-gray-100">
+                                                 {semana}
                                             </td>
                                         </tr>
-                                    ))}
-                                </tbody>
+
+                                        {registrosSemana.map((checada, idx) => {
+                                            const diaTexto = obtenerDiaLegible(checada.fecha);
+                                            const colorDia = (diaTexto === 'HOY' || diaTexto === 'AYER') ? 'text-blue-600' : 'text-gray-400';
+                                            
+                                            // 🚨 LÓGICA DE DETECCIÓN DE OMISIÓN DE SALIDA 🚨
+                                            let omisionSalida = false;
+                                            if (checada.tipoRegistro === 'Entrada') {
+                                                const fechaCorta = new Date(checada.fecha).toDateString();
+                                                // Buscar si existe una salida para esta misma materia en este mismo día
+                                                const tieneSalida = grupo.registrosTotales.some(r => 
+                                                    r.tipoRegistro === 'Salida' && 
+                                                    (r.materia?._id === checada.materia?._id || r.materia?.nombre === checada.materia?.nombre) &&
+                                                    new Date(r.fecha).toDateString() === fechaCorta
+                                                );
+                                                
+                                                if (!tieneSalida) {
+                                                    // Si pasaron más de 2.5 horas desde la entrada, se considera salida omitida
+                                                    const horasPasadas = (new Date() - new Date(checada.fecha)) / (1000 * 60 * 60);
+                                                    if (horasPasadas > 2.5) {
+                                                        omisionSalida = true;
+                                                    }
+                                                }
+                                            }
+
+                                            return (
+                                            <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-11 h-11 bg-gray-50 rounded-xl flex flex-col items-center justify-center border border-gray-100 shrink-0">
+                                                            <span className="text-[9px] font-black text-gray-400 uppercase leading-none">{new Date(checada.fecha).toLocaleDateString('es-MX', { month: 'short' })}</span>
+                                                            <span className="text-sm font-black text-gray-900 leading-none">{new Date(checada.fecha).getDate()}</span>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm font-bold text-gray-900">{new Date(checada.fecha).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true })}</p>
+                                                            <p className={`text-[10px] font-black uppercase tracking-wider ${colorDia}`}>{diaTexto}</p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+
+                                                <td className="px-6 py-4">
+                                                    <span className="text-sm font-bold text-gray-700 truncate max-w-[200px] block" title={checada.materia?.nombre || 'General'}>
+                                                        {checada.materia?.nombre || 'Clase General'}
+                                                    </span>
+                                                </td>
+
+                                                <td className="px-6 py-4 text-center">
+                                                    {checada.tipoRegistro === 'Entrada' ? (
+                                                        <div className="flex flex-col items-center gap-1.5">
+                                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-indigo-50 text-indigo-700 text-[10px] font-black uppercase tracking-wider border border-indigo-100">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clipRule="evenodd" /></svg>
+                                                                Entrada
+                                                            </span>
+                                                            {omisionSalida && (
+                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] bg-red-50 text-red-600 font-black uppercase tracking-widest border border-red-200" title="El docente omitió su registro de salida">
+                                                                    ⚠️ Sin Salida
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    ) : (
+                                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-orange-50 text-orange-700 text-[10px] font-black uppercase tracking-wider border border-orange-100">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm7.707-3.293a1 1 0 010-1.414L13.586 9H7a1 1 0 110-2h6.586l-2.879-2.879a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>
+                                                            Salida
+                                                        </span>
+                                                    )}
+                                                </td>
+
+                                                <td className="px-6 py-4 text-center">
+                                                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                                                        checada.estatus === 'A tiempo' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                                                        checada.estatus === 'Retardo' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                                                        checada.estatus === 'Justificado' ? 'bg-purple-50 text-purple-700 border-purple-100' :
+                                                        'bg-red-50 text-red-700 border-red-100'
+                                                    }`}>
+                                                        {checada.estatus}
+                                                    </span>
+                                                </td>
+                                                
+                                                <td className="px-6 py-4 text-center">
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <button
+                                                            onClick={() => abrirDetalleDia(checada)}
+                                                            className="bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-[10px] uppercase tracking-widest px-3 py-2 rounded-xl transition-all border border-blue-100"
+                                                            title="Ver línea de tiempo"
+                                                        >
+                                                            Detalle
+                                                        </button>
+
+                                                        {(checada.estatus === 'Retardo' || checada.estatus === 'Falta') && (
+                                                            <button
+                                                                onClick={() => abrirModalJustificar(checada._id)}
+                                                                disabled={procesandoId === checada._id}
+                                                                className="bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold text-[10px] uppercase tracking-widest px-3 py-2 rounded-xl transition-all disabled:opacity-50"
+                                                            >
+                                                                Justificar
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )})}
+                                    </tbody>
+                                ))}
                             </table>
                         </div>
                     </div>
@@ -389,6 +471,29 @@ const ReporteAsistenciaDocentesPage = () => {
             )}
           </div>
 
+          {/* CONTROLES DE PAGINACIÓN */}
+          {totalPaginas > 1 && (
+            <div className="flex items-center justify-between pb-10 pt-4 px-2">
+                <button 
+                    onClick={() => setPaginaActual(prev => Math.max(prev - 1, 1))}
+                    disabled={paginaActual === 1}
+                    className="px-6 py-3 bg-white text-gray-700 font-bold rounded-xl shadow-sm border border-gray-100 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                >
+                    Anterior
+                </button>
+                <div className="text-sm font-bold text-gray-500">
+                    Página <span className="text-gray-900 font-black">{paginaActual}</span> de {totalPaginas}
+                </div>
+                <button 
+                    onClick={() => setPaginaActual(prev => Math.min(prev + 1, totalPaginas))}
+                    disabled={paginaActual === totalPaginas}
+                    className="px-6 py-3 bg-white text-gray-700 font-bold rounded-xl shadow-sm border border-gray-100 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                >
+                    Siguiente
+                </button>
+            </div>
+          )}
+
         </div>
       </div>
 
@@ -399,11 +504,11 @@ const ReporteAsistenciaDocentesPage = () => {
                <div className="bg-white rounded-3xl p-8 max-w-sm w-full relative z-10 shadow-2xl">
                    <h3 className="text-xl font-black mb-2 text-gray-900">Justificar Asistencia</h3>
                    <textarea 
-                        rows="3" 
-                        value={motivoTexto} onChange={(e) => setMotivoTexto(e.target.value)}
-                        placeholder="Escribe el motivo de la justificación..."
-                        className="w-full border border-gray-200 bg-gray-50 p-4 text-sm font-bold text-gray-700 rounded-xl mb-4 outline-none focus:ring-2 focus:ring-purple-500 focus:bg-white transition-all"
-                    ></textarea>
+                       rows="3" 
+                       value={motivoTexto} onChange={(e) => setMotivoTexto(e.target.value)}
+                       placeholder="Escribe el motivo de la justificación..."
+                       className="w-full border border-gray-200 bg-gray-50 p-4 text-sm font-bold text-gray-700 rounded-xl mb-4 outline-none focus:ring-2 focus:ring-purple-500 focus:bg-white transition-all"
+                   ></textarea>
                    <button onClick={confirmarJustificacion} className="bg-purple-600 hover:bg-purple-700 transition-colors text-white font-bold p-3 w-full rounded-xl active:scale-95">Guardar Justificación</button>
                </div>
           </div>
@@ -481,4 +586,3 @@ const ReporteAsistenciaDocentesPage = () => {
 };
 
 export default ReporteAsistenciaDocentesPage;
-
