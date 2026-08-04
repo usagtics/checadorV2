@@ -232,7 +232,7 @@ export const getNominaDetalle = async (req, res) => {
             if (!nomina[docenteId]) {
                 nomina[docenteId] = {
                     nombre: `${par.docente.nombre} ${par.docente.apellidos}`,
-                    horasSabatinas: 0, horasDominicales: 0, horasMatutinas: 0, horasLinea: 0,
+                    minutosSabatinos: 0, minutosDominicales: 0, minutosMatutinos: 0, minutosLinea: 0,
                     metodoPago: par.docente.metodoPago || "TARJETA",
                     total: 0,
                     incidencias: []
@@ -240,7 +240,7 @@ export const getNominaDetalle = async (req, res) => {
             }
 
             if (par.entrada && par.salida && par.salida > par.entrada) {
-                let horasTrabajadas = 0; 
+                let minutosTrabajados = 0; 
                 
                 const oferta = await OfertaAcademica.findOne({
                     docente: par.docente._id,
@@ -267,11 +267,12 @@ export const getNominaDetalle = async (req, res) => {
                         const salidaEfectiva = new Date(Math.min(par.salida.getTime(), finOficial.getTime()));
 
                         if (salidaEfectiva > entradaEfectiva) {
-                            horasTrabajadas = (salidaEfectiva - entradaEfectiva) / (1000 * 60 * 60);
+                            // Calculamos en minutos exactos y redondeamos para evitar decimales extraños
+                            minutosTrabajados = Math.round((salidaEfectiva - entradaEfectiva) / (1000 * 60));
                         }
                     }
                 } else {
-                    horasTrabajadas = (par.salida - par.entrada) / (1000 * 60 * 60);
+                    minutosTrabajados = Math.round((par.salida - par.entrada) / (1000 * 60));
                 }
 
                 let turnoClase = 'Matutino';
@@ -280,18 +281,23 @@ export const getNominaDetalle = async (req, res) => {
                 
                 const turnoLimpio = turnoClase.toUpperCase();
 
+                // Calculamos el dinero exacto por minuto trabajado (Pago por hora / 60)
                 if (turnoLimpio === 'SABATINO') {
-                    nomina[docenteId].horasSabatinas += horasTrabajadas;
-                    nomina[docenteId].total += (horasTrabajadas * (par.docente.pagoHoraSabatino || 200));
+                    nomina[docenteId].minutosSabatinos += minutosTrabajados;
+                    const pagoHora = par.docente.pagoHoraSabatino || 200;
+                    nomina[docenteId].total += (minutosTrabajados / 60) * pagoHora;
                 } else if (turnoLimpio === 'DOMINICAL') {
-                    nomina[docenteId].horasDominicales += horasTrabajadas;
-                    nomina[docenteId].total += (horasTrabajadas * (par.docente.pagoHoraDominical || par.docente.pagoHoraSabatino || 200));
+                    nomina[docenteId].minutosDominicales += minutosTrabajados;
+                    const pagoHora = par.docente.pagoHoraDominical || par.docente.pagoHoraSabatino || 200;
+                    nomina[docenteId].total += (minutosTrabajados / 60) * pagoHora;
                 } else if (turnoLimpio === 'LÍNEA' || turnoLimpio === 'LINEA' || turnoLimpio === 'VIRTUAL') {
-                    nomina[docenteId].horasLinea += horasTrabajadas;
-                    nomina[docenteId].total += (horasTrabajadas * (par.docente.pagoHoraLinea || 250));
+                    nomina[docenteId].minutosLinea += minutosTrabajados;
+                    const pagoHora = par.docente.pagoHoraLinea || 250;
+                    nomina[docenteId].total += (minutosTrabajados / 60) * pagoHora;
                 } else {
-                    nomina[docenteId].horasMatutinas += horasTrabajadas;
-                    nomina[docenteId].total += (horasTrabajadas * (par.docente.pagoHoraMatutino || 200));
+                    nomina[docenteId].minutosMatutinos += minutosTrabajados;
+                    const pagoHora = par.docente.pagoHoraMatutino || 200;
+                    nomina[docenteId].total += (minutosTrabajados / 60) * pagoHora;
                 }
             }
 
@@ -300,7 +306,6 @@ export const getNominaDetalle = async (req, res) => {
                 if (!nomina[docenteId].incidencias.includes(desc)) nomina[docenteId].incidencias.push(desc);
             });
 
-            // 🚨 NUEVA REGLA: Detectar la Omisión de Salida
             if (par.entrada && !par.salida) {
                 const descOmision = `Omisión de salida en ${par.materia.nombre || 'Clase'}`;
                 if (!nomina[docenteId].incidencias.includes(descOmision)) {
@@ -309,7 +314,25 @@ export const getNominaDetalle = async (req, res) => {
             }
         }
 
-        const resultadoFinal = Object.values(nomina).map(doc => ({ ...doc, incidencias: doc.incidencias.join(', ') }));
+        // Función auxiliar para formatear los minutos a texto limpio (Ej: "4 hr 30 min")
+        const formatearMinutosAHoras = (totalMinutos) => {
+            const horas = Math.floor(totalMinutos / 60);
+            const minutos = totalMinutos % 60;
+            if (horas === 0) return `${minutos} min`;
+            if (minutos === 0) return `${horas} hr`;
+            return `${horas} hr ${minutos} min`;
+        };
+
+        const resultadoFinal = Object.values(nomina).map(doc => ({
+            ...doc,
+            horasSabatinas: formatearMinutosAHoras(doc.minutosSabatinos),
+            horasDominicales: formatearMinutosAHoras(doc.minutosDominicales),
+            horasMatutinas: formatearMinutosAHoras(doc.minutosMatutinos),
+            horasLinea: formatearMinutosAHoras(doc.minutosLinea),
+            total: `$${doc.total.toFixed(2)}`, // Redondeo exacto a 2 decimales para dinero
+            incidencias: doc.incidencias.join(', ')
+        }));
+
         res.json(resultadoFinal);
     } catch (error) {
         console.error("Error al calcular nómina:", error);

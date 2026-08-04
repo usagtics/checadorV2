@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import MenuDocentes from '../../menu/MenuDocentes';
 import axios from 'axios'; 
 
-// FUNCIÓN PARA OBTENER LA ETIQUETA DE LA SEMANA
+// --- FUNCIONES AUXILIARES ---
 const obtenerEtiquetaSemana = (fechaString) => {
     const fecha = new Date(fechaString);
     const dia = fecha.getDay(); 
@@ -33,6 +33,202 @@ const obtenerDiaLegible = (fechaString) => {
     return diaSemana.charAt(0).toUpperCase() + diaSemana.slice(1); 
 };
 
+// 🌟 SUB-COMPONENTE: TARJETA INDIVIDUAL CON PAGINACIÓN INTERNA 🌟
+const TarjetaDocente = ({ grupo, calcularSemaforo, abrirDetalleDia, abrirModalJustificar, procesandoId }) => {
+    const [paginaInterna, setPaginaInterna] = useState(1);
+    const registrosPorPagina = 6; 
+
+    // Calcular paginación interna
+    const totalPaginasInternas = Math.ceil(grupo.registrosTotales.length / registrosPorPagina);
+    const registrosPaginados = grupo.registrosTotales.slice(
+        (paginaInterna - 1) * registrosPorPagina, 
+        paginaInterna * registrosPorPagina
+    );
+
+    // Agrupar por semana SOLO los registros que tocan en esta página
+    const semanasPagina = registrosPaginados.reduce((acc, checada) => {
+        const semana = obtenerEtiquetaSemana(checada.fecha);
+        if(!acc[semana]) acc[semana] = [];
+        acc[semana].push(checada);
+        return acc;
+    }, {});
+
+    return (
+        <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden relative">
+            <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${calcularSemaforo(grupo.registrosTotales)} z-10`}></div>
+
+            {/* Cabecera de la Tarjeta */}
+            <div className="bg-blue-50/40 px-8 py-4 border-b border-gray-100 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    <div className="relative">
+                        <div className="w-12 h-12 rounded-full bg-white text-blue-900 flex items-center justify-center font-black text-lg border border-gray-200 shadow-sm">
+                            {grupo.docente?.nombre?.charAt(0) || 'U'}
+                        </div>
+                        <span className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-white shadow-sm ${calcularSemaforo(grupo.registrosTotales)}`}></span>
+                    </div>
+                    <div>
+                        <h3 className="text-lg font-black text-gray-900">{grupo.docente?.nombre} {grupo.docente?.apellidos}</h3>
+                        <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Matrícula: {grupo.docente?.numeroEmpleado}</p>
+                    </div>
+                </div>
+                <div className="text-right hidden md:block">
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Total de Registros</p>
+                    <p className="text-lg font-black text-blue-600">{grupo.registrosTotales.length}</p>
+                </div>
+            </div>
+
+            {/* Tabla de Registros Paginada */}
+            <div className="overflow-x-auto pl-2">
+                <table className="w-full text-left border-collapse min-w-[800px]">
+                    <thead>
+                        <tr className="bg-white border-b border-gray-50">
+                            <th className="px-6 py-3 text-[10px] font-black text-gray-400 uppercase tracking-widest w-48">Fecha y Hora</th>
+                            <th className="px-6 py-3 text-[10px] font-black text-gray-400 uppercase tracking-widest">Materia</th>
+                            <th className="px-6 py-3 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Tipo</th>
+                            <th className="px-6 py-3 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Estatus</th>
+                            <th className="px-6 py-3 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    
+                    {Object.entries(semanasPagina).map(([semana, registrosSemana], secIdx) => (
+                        <tbody key={secIdx} className="divide-y divide-gray-50">
+                            <tr>
+                                <td colSpan="5" className="px-6 py-2.5 bg-gray-50/80 text-[10px] font-black text-blue-900 uppercase tracking-widest border-y border-gray-100">
+                                    📅 {semana}
+                                </td>
+                            </tr>
+
+                            {registrosSemana.map((checada, idx) => {
+                                const diaTexto = obtenerDiaLegible(checada.fecha);
+                                const colorDia = (diaTexto === 'HOY' || diaTexto === 'AYER') ? 'text-blue-600' : 'text-gray-400';
+                                
+                                // 🚨 LÓGICA DE DETECCIÓN DE OMISIÓN DE SALIDA 🚨
+                                let omisionSalida = false;
+                                if (checada.tipoRegistro === 'Entrada') {
+                                    const fechaCorta = new Date(checada.fecha).toDateString();
+                                    
+                                    const tieneSalida = grupo.registrosTotales.some(r => 
+                                        r.tipoRegistro === 'Salida' && 
+                                        (r.materia?._id === checada.materia?._id || r.materia?.nombre === checada.materia?.nombre) &&
+                                        new Date(r.fecha).toDateString() === fechaCorta &&
+                                        new Date(r.fecha).getTime() >= new Date(checada.fecha).getTime() // Verifica que la salida sea DESPUÉS de esta entrada
+                                    );
+                                    
+                                    if (!tieneSalida) {
+                                        const horasPasadas = (new Date() - new Date(checada.fecha)) / (1000 * 60 * 60);
+                                        if (horasPasadas > 2.5) omisionSalida = true;
+                                    }
+                                }
+
+                                return (
+                                <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-11 h-11 bg-gray-50 rounded-xl flex flex-col items-center justify-center border border-gray-100 shrink-0">
+                                                <span className="text-[9px] font-black text-gray-400 uppercase leading-none">{new Date(checada.fecha).toLocaleDateString('es-MX', { month: 'short' })}</span>
+                                                <span className="text-sm font-black text-gray-900 leading-none">{new Date(checada.fecha).getDate()}</span>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-bold text-gray-900">{new Date(checada.fecha).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true })}</p>
+                                                <p className={`text-[10px] font-black uppercase tracking-wider ${colorDia}`}>{diaTexto}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    <td className="px-6 py-4">
+                                        <span className="text-sm font-bold text-gray-700 truncate max-w-[200px] block" title={checada.materia?.nombre || 'General'}>
+                                            {checada.materia?.nombre || 'Clase General'}
+                                        </span>
+                                    </td>
+
+                                    <td className="px-6 py-4 text-center">
+                                        {checada.tipoRegistro === 'Entrada' ? (
+                                            <div className="flex flex-col items-center gap-1.5">
+                                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-indigo-50 text-indigo-700 text-[10px] font-black uppercase tracking-wider border border-indigo-100">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clipRule="evenodd" /></svg>
+                                                    Entrada
+                                                </span>
+                                                {omisionSalida && (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] bg-red-50 text-red-600 font-black uppercase tracking-widest border border-red-200" title="El docente omitió su registro de salida">
+                                                        ⚠️ Sin Salida
+                                                    </span>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-orange-50 text-orange-700 text-[10px] font-black uppercase tracking-wider border border-orange-100">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm7.707-3.293a1 1 0 010-1.414L13.586 9H7a1 1 0 110-2h6.586l-2.879-2.879a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>
+                                                Salida
+                                            </span>
+                                        )}
+                                    </td>
+
+                                    <td className="px-6 py-4 text-center">
+                                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                                            checada.estatus === 'A tiempo' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                                            checada.estatus === 'Retardo' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                                            checada.estatus === 'Justificado' ? 'bg-purple-50 text-purple-700 border-purple-100' :
+                                            'bg-red-50 text-red-700 border-red-100'
+                                        }`}>
+                                            {checada.estatus}
+                                        </span>
+                                    </td>
+                                    
+                                    <td className="px-6 py-4 text-center">
+                                        <div className="flex items-center justify-center gap-2">
+                                            <button
+                                                onClick={() => abrirDetalleDia(checada)}
+                                                className="bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-[10px] uppercase tracking-widest px-3 py-2 rounded-xl transition-all border border-blue-100"
+                                                title="Ver línea de tiempo"
+                                            >
+                                                Detalle
+                                            </button>
+
+                                            {(checada.estatus === 'Retardo' || checada.estatus === 'Falta') && (
+                                                <button
+                                                    onClick={() => abrirModalJustificar(checada._id)}
+                                                    disabled={procesandoId === checada._id}
+                                                    className="bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold text-[10px] uppercase tracking-widest px-3 py-2 rounded-xl transition-all disabled:opacity-50"
+                                                >
+                                                    Justificar
+                                                </button>
+                                            )}
+                                        </div>
+                                    </td>
+                                </tr>
+                            )})}
+                        </tbody>
+                    ))}
+                </table>
+            </div>
+            
+            {/* Controles de Paginación Interna */}
+            {totalPaginasInternas > 1 && (
+                <div className="flex items-center justify-between px-8 py-4 bg-gray-50 border-t border-gray-100">
+                    <button 
+                        onClick={() => setPaginaInterna(p => Math.max(p - 1, 1))}
+                        disabled={paginaInterna === 1}
+                        className="px-4 py-2 bg-white text-gray-600 font-bold rounded-lg shadow-sm border border-gray-200 hover:bg-gray-50 disabled:opacity-50 text-xs uppercase tracking-widest transition-all"
+                    >
+                        Anterior
+                    </button>
+                    <span className="text-xs font-black text-gray-400 uppercase tracking-widest">
+                        Página <span className="text-blue-600">{paginaInterna}</span> de {totalPaginasInternas}
+                    </span>
+                    <button 
+                        onClick={() => setPaginaInterna(p => Math.min(p + 1, totalPaginasInternas))}
+                        disabled={paginaInterna === totalPaginasInternas}
+                        className="px-4 py-2 bg-white text-gray-600 font-bold rounded-lg shadow-sm border border-gray-200 hover:bg-gray-50 disabled:opacity-50 text-xs uppercase tracking-widest transition-all"
+                    >
+                        Siguiente
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+};
+
+
+// --- PÁGINA PRINCIPAL (CONTENEDOR GLOBAL) ---
 const ReporteAsistenciaDocentesPage = () => {
   const { checadas, getChecadas, cargando, justificarAsistencia } = useChecadasDocente();
   
@@ -40,6 +236,7 @@ const ReporteAsistenciaDocentesPage = () => {
   const [filtroEstatus, setFiltroEstatus] = useState('');
   const [filtroFecha, setFiltroFecha] = useState('');
   
+  // Paginación Global (Maestros)
   const [paginaActual, setPaginaActual] = useState(1);
   const docentesPorPagina = 5;
 
@@ -90,23 +287,15 @@ const ReporteAsistenciaDocentesPage = () => {
 
   const checadasAgrupadas = checadasFiltradas?.reduce((grupos, checada) => {
       const docenteId = checada.docente?._id || 'desconocido';
-      const etiquetaSemana = obtenerEtiquetaSemana(checada.fecha);
 
       if (!grupos[docenteId]) {
           grupos[docenteId] = {
               docente: checada.docente,
-              registrosTotales: [], 
-              semanas: {} 
+              registrosTotales: []
           };
       }
 
-      if (!grupos[docenteId].semanas[etiquetaSemana]) {
-          grupos[docenteId].semanas[etiquetaSemana] = [];
-      }
-
-      grupos[docenteId].semanas[etiquetaSemana].push(checada);
       grupos[docenteId].registrosTotales.push(checada);
-      
       return grupos;
   }, {});
 
@@ -164,7 +353,6 @@ const ReporteAsistenciaDocentesPage = () => {
           const fechaCorta = `${year}-${month}-${day}`; 
 
           const docenteId = checada.docente._id;
-          
           const baseURL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000';
           
           const response = await axios.get(`${baseURL}/api/asistencias/desglose/${docenteId}?fecha=${fechaCorta}`, {
@@ -315,154 +503,15 @@ const ReporteAsistenciaDocentesPage = () => {
                 </div>
             ) : gruposPaginados.length > 0 ? (
                 gruposPaginados.map((grupo, index) => (
-                    <div key={index} className="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden relative">
-                        
-                        <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${calcularSemaforo(grupo.registrosTotales)} z-10`}></div>
-
-                        <div className="bg-blue-50/40 px-8 py-4 border-b border-gray-100 flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                                <div className="relative">
-                                    <div className="w-12 h-12 rounded-full bg-white text-blue-900 flex items-center justify-center font-black text-lg border border-gray-200 shadow-sm">
-                                        {grupo.docente?.nombre?.charAt(0) || 'U'}
-                                    </div>
-                                    <span className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2 border-white shadow-sm ${calcularSemaforo(grupo.registrosTotales)}`}></span>
-                                </div>
-                                <div>
-                                    <h3 className="text-lg font-black text-gray-900">{grupo.docente?.nombre} {grupo.docente?.apellidos}</h3>
-                                    <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Matrícula: {grupo.docente?.numeroEmpleado}</p>
-                                </div>
-                            </div>
-                            <div className="text-right hidden md:block">
-                                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Total de Registros</p>
-                                <p className="text-lg font-black text-blue-600">{grupo.registrosTotales.length}</p>
-                            </div>
-                        </div>
-
-                        <div className="overflow-x-auto pl-2">
-                            <table className="w-full text-left border-collapse min-w-[800px]">
-                                <thead>
-                                    <tr className="bg-white border-b border-gray-50">
-                                        <th className="px-6 py-3 text-[10px] font-black text-gray-400 uppercase tracking-widest w-48">Fecha y Hora</th>
-                                        <th className="px-6 py-3 text-[10px] font-black text-gray-400 uppercase tracking-widest">Materia</th>
-                                        <th className="px-6 py-3 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Tipo</th>
-                                        <th className="px-6 py-3 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Estatus</th>
-                                        <th className="px-6 py-3 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Acciones</th>
-                                    </tr>
-                                </thead>
-                                
-                                {Object.entries(grupo.semanas).map(([semana, registrosSemana], secIdx) => (
-                                    <tbody key={secIdx} className="divide-y divide-gray-50">
-                                        <tr>
-                                            <td colSpan="5" className="px-6 py-2.5 bg-gray-50/80 text-[10px] font-black text-blue-900 uppercase tracking-widest border-y border-gray-100">
-                                                 {semana}
-                                            </td>
-                                        </tr>
-
-                                        {registrosSemana.map((checada, idx) => {
-                                            const diaTexto = obtenerDiaLegible(checada.fecha);
-                                            const colorDia = (diaTexto === 'HOY' || diaTexto === 'AYER') ? 'text-blue-600' : 'text-gray-400';
-                                            
-                                            // 🚨 LÓGICA DE DETECCIÓN DE OMISIÓN DE SALIDA 🚨
-                                            let omisionSalida = false;
-                                            if (checada.tipoRegistro === 'Entrada') {
-                                                const fechaCorta = new Date(checada.fecha).toDateString();
-                                                // Buscar si existe una salida para esta misma materia en este mismo día
-                                                const tieneSalida = grupo.registrosTotales.some(r => 
-                                                    r.tipoRegistro === 'Salida' && 
-                                                    (r.materia?._id === checada.materia?._id || r.materia?.nombre === checada.materia?.nombre) &&
-                                                    new Date(r.fecha).toDateString() === fechaCorta
-                                                );
-                                                
-                                                if (!tieneSalida) {
-                                                    // Si pasaron más de 2.5 horas desde la entrada, se considera salida omitida
-                                                    const horasPasadas = (new Date() - new Date(checada.fecha)) / (1000 * 60 * 60);
-                                                    if (horasPasadas > 2.5) {
-                                                        omisionSalida = true;
-                                                    }
-                                                }
-                                            }
-
-                                            return (
-                                            <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
-                                                <td className="px-6 py-4">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-11 h-11 bg-gray-50 rounded-xl flex flex-col items-center justify-center border border-gray-100 shrink-0">
-                                                            <span className="text-[9px] font-black text-gray-400 uppercase leading-none">{new Date(checada.fecha).toLocaleDateString('es-MX', { month: 'short' })}</span>
-                                                            <span className="text-sm font-black text-gray-900 leading-none">{new Date(checada.fecha).getDate()}</span>
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-sm font-bold text-gray-900">{new Date(checada.fecha).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true })}</p>
-                                                            <p className={`text-[10px] font-black uppercase tracking-wider ${colorDia}`}>{diaTexto}</p>
-                                                        </div>
-                                                    </div>
-                                                </td>
-
-                                                <td className="px-6 py-4">
-                                                    <span className="text-sm font-bold text-gray-700 truncate max-w-[200px] block" title={checada.materia?.nombre || 'General'}>
-                                                        {checada.materia?.nombre || 'Clase General'}
-                                                    </span>
-                                                </td>
-
-                                                <td className="px-6 py-4 text-center">
-                                                    {checada.tipoRegistro === 'Entrada' ? (
-                                                        <div className="flex flex-col items-center gap-1.5">
-                                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-indigo-50 text-indigo-700 text-[10px] font-black uppercase tracking-wider border border-indigo-100">
-                                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clipRule="evenodd" /></svg>
-                                                                Entrada
-                                                            </span>
-                                                            {omisionSalida && (
-                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] bg-red-50 text-red-600 font-black uppercase tracking-widest border border-red-200" title="El docente omitió su registro de salida">
-                                                                    ⚠️ Sin Salida
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    ) : (
-                                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-orange-50 text-orange-700 text-[10px] font-black uppercase tracking-wider border border-orange-100">
-                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm7.707-3.293a1 1 0 010-1.414L13.586 9H7a1 1 0 110-2h6.586l-2.879-2.879a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" /></svg>
-                                                            Salida
-                                                        </span>
-                                                    )}
-                                                </td>
-
-                                                <td className="px-6 py-4 text-center">
-                                                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
-                                                        checada.estatus === 'A tiempo' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                                                        checada.estatus === 'Retardo' ? 'bg-amber-50 text-amber-700 border-amber-100' :
-                                                        checada.estatus === 'Justificado' ? 'bg-purple-50 text-purple-700 border-purple-100' :
-                                                        'bg-red-50 text-red-700 border-red-100'
-                                                    }`}>
-                                                        {checada.estatus}
-                                                    </span>
-                                                </td>
-                                                
-                                                <td className="px-6 py-4 text-center">
-                                                    <div className="flex items-center justify-center gap-2">
-                                                        <button
-                                                            onClick={() => abrirDetalleDia(checada)}
-                                                            className="bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-[10px] uppercase tracking-widest px-3 py-2 rounded-xl transition-all border border-blue-100"
-                                                            title="Ver línea de tiempo"
-                                                        >
-                                                            Detalle
-                                                        </button>
-
-                                                        {(checada.estatus === 'Retardo' || checada.estatus === 'Falta') && (
-                                                            <button
-                                                                onClick={() => abrirModalJustificar(checada._id)}
-                                                                disabled={procesandoId === checada._id}
-                                                                className="bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold text-[10px] uppercase tracking-widest px-3 py-2 rounded-xl transition-all disabled:opacity-50"
-                                                            >
-                                                                Justificar
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        )})}
-                                    </tbody>
-                                ))}
-                            </table>
-                        </div>
-                    </div>
+                    /* COMPONENTE TARJETA QUE ENCAPSULA LA PAGINACIÓN INTERNA */
+                    <TarjetaDocente 
+                        key={index} 
+                        grupo={grupo} 
+                        calcularSemaforo={calcularSemaforo} 
+                        abrirDetalleDia={abrirDetalleDia} 
+                        abrirModalJustificar={abrirModalJustificar} 
+                        procesandoId={procesandoId} 
+                    />
                 ))
             ) : (
                 <div className="bg-white p-10 rounded-[2rem] shadow-sm text-center border border-gray-100">
@@ -471,7 +520,7 @@ const ReporteAsistenciaDocentesPage = () => {
             )}
           </div>
 
-          {/* CONTROLES DE PAGINACIÓN */}
+          {/* CONTROLES DE PAGINACIÓN GLOBAL */}
           {totalPaginas > 1 && (
             <div className="flex items-center justify-between pb-10 pt-4 px-2">
                 <button 
@@ -482,7 +531,7 @@ const ReporteAsistenciaDocentesPage = () => {
                     Anterior
                 </button>
                 <div className="text-sm font-bold text-gray-500">
-                    Página <span className="text-gray-900 font-black">{paginaActual}</span> de {totalPaginas}
+                    Mostrando hoja <span className="text-gray-900 font-black">{paginaActual}</span> de {totalPaginas}
                 </div>
                 <button 
                     onClick={() => setPaginaActual(prev => Math.min(prev + 1, totalPaginas))}
