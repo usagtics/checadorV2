@@ -227,13 +227,25 @@ export const getNominaDetalle = async (req, res) => {
             if (registro.estatus === 'Retardo' || registro.estatus === 'Falta') emparejamiento[llaveUnica].estatusList.push(registro.estatus);
         });
 
+        const formatearMinutosAHoras = (totalMinutos) => {
+            if (!totalMinutos || isNaN(totalMinutos) || totalMinutos <= 0) return '0 hr';
+            const horas = Math.floor(totalMinutos / 60);
+            const minutos = totalMinutos % 60;
+            if (horas === 0) return `${minutos} min`;
+            if (minutos === 0) return `${horas} hr`;
+            return `${horas} hr ${minutos} min`;
+        };
+
         for (const par of Object.values(emparejamiento)) {
             const docenteId = par.docente._id.toString();
             if (!nomina[docenteId]) {
                 nomina[docenteId] = {
                     nombre: `${par.docente.nombre} ${par.docente.apellidos}`,
-                    minutosSabatinos: 0, minutosDominicales: 0, minutosMatutinos: 0, minutosLinea: 0,
-                    metodoPago: par.docente.metodoPago || "TARJETA",
+                    minutosSabatinos: 0, 
+                    minutosDominicales: 0, 
+                    minutosMatutinos: 0, 
+                    minutosLinea: 0,
+                    metodoPago: par.docente.metodoPago || "EFECTIVO",
                     total: 0,
                     incidencias: []
                 };
@@ -312,22 +324,14 @@ export const getNominaDetalle = async (req, res) => {
             }
         }
 
-        const formatearMinutosAHoras = (totalMinutos) => {
-            if (!totalMinutos || isNaN(totalMinutos)) return '0 hr';
-            const horas = Math.floor(totalMinutos / 60);
-            const minutos = totalMinutos % 60;
-            if (horas === 0) return `${minutos} min`;
-            if (minutos === 0) return `${horas} hr`;
-            return `${horas} hr ${minutos} min`;
-        };
-
         const resultadoFinal = Object.values(nomina).map(doc => ({
-            ...doc,
+            nombre: doc.nombre,
             horasSabatinas: formatearMinutosAHoras(doc.minutosSabatinos),
             horasDominicales: formatearMinutosAHoras(doc.minutosDominicales),
             horasMatutinas: formatearMinutosAHoras(doc.minutosMatutinos),
             horasLinea: formatearMinutosAHoras(doc.minutosLinea),
-            total: Number(doc.total.toFixed(2)),
+            metodoPago: doc.metodoPago,
+            total: Number((doc.total || 0).toFixed(2)),
             incidencias: doc.incidencias.join(', ')
         }));
 
