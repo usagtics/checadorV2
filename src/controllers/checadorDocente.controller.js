@@ -146,16 +146,24 @@ export const registrarAsistenciaQR = async (req, res) => {
             if (diferenciaMinutos < 20) {
                 return res.status(400).json({ message: `Espera ${Math.ceil(20 - diferenciaMinutos)} min más para salir.` });
             }
+
+            const finClaseMinutos = convertirHoraAMinutos(horarioActual.horaFin);
+            let estatusSalida = 'A tiempo';
+
+            if (horaActualMinutos < (finClaseMinutos - 10)) {
+                estatusSalida = 'Salida anticipada';
+            }
+
             const nuevaSalida = new AsistenciaDocente({
                 docente: docente._id,
                 materia: claseActual.materia._id, 
                 grupo: claseActual.grupo._id,
                 tipoRegistro: 'Salida', 
                 fecha: new Date(), 
-                estatus: 'A tiempo'
+                estatus: estatusSalida 
             });
             await nuevaSalida.save();
-            return res.status(200).json({ message: `Salida registrada` });
+            return res.status(200).json({ message: `Salida registrada`, estatus: estatusSalida });
         }
     } catch (error) {
         console.error("❌ Error:", error);
@@ -220,11 +228,27 @@ export const getNominaDetalle = async (req, res) => {
             const llaveUnica = `${docenteId}_${fechaCorta}_${materiaId}`; 
 
             if (!emparejamiento[llaveUnica]) {
-                emparejamiento[llaveUnica] = { entrada: null, salida: null, docente: registro.docente, materia: registro.materia, grupo: registro.grupo, fechaFisica: registro.fecha, estatusList: [] };
+                emparejamiento[llaveUnica] = { 
+                    entrada: null, 
+                    salida: null, 
+                    docente: registro.docente, 
+                    materia: registro.materia, 
+                    grupo: registro.grupo, 
+                    fechaFisica: registro.fecha, 
+                    estatusList: [],
+                    esJustificado: false // 🔥 Nuevo campo para marcar si la clase completa está justificada
+                };
             }
             if (registro.tipoRegistro === 'Entrada' && !emparejamiento[llaveUnica].entrada) emparejamiento[llaveUnica].entrada = registro.fecha;
             if (registro.tipoRegistro === 'Salida') emparejamiento[llaveUnica].salida = registro.fecha;
-            if (registro.estatus === 'Retardo' || registro.estatus === 'Falta') emparejamiento[llaveUnica].estatusList.push(registro.estatus);
+            
+            // Si cualquier registro del día dice "Justificado", marcamos toda la clase como perdonada
+            if (registro.estatus === 'Justificado') {
+                emparejamiento[llaveUnica].esJustificado = true;
+                emparejamiento[llaveUnica].estatusList.push('Justificado');
+            } else if (registro.estatus === 'Retardo' || registro.estatus === 'Falta' || registro.estatus === 'Salida anticipada') {
+                emparejamiento[llaveUnica].estatusList.push(registro.estatus);
+            }
         });
 
         const formatearMinutosAHoras = (totalMinutos) => {
@@ -251,12 +275,14 @@ export const getNominaDetalle = async (req, res) => {
                 };
             }
 
-            if (par.entrada && par.salida && par.salida > par.entrada) {
+            // 🔥 FIX: Procesar el pago si tiene Entrada y Salida, O SI ESTÁ JUSTIFICADO
+            if ((par.entrada && par.salida && par.salida > par.entrada) || par.esJustificado) {
                 let minutosTrabajados = 0; 
                 
                 const oferta = await OfertaAcademica.findOne({
                     docente: par.docente._id,
                     materia: par.materia._id,
+                    grupo: par.grupo?._id,
                     periodo: periodoActivo?._id
                 }).populate('grupo');
 
@@ -275,14 +301,22 @@ export const getNominaDetalle = async (req, res) => {
                         const finOficial = new Date(par.fechaFisica);
                         finOficial.setHours(hFin, mFin, 0, 0);
 
-                        const entradaEfectiva = new Date(Math.max(par.entrada.getTime(), inicioOficial.getTime()));
-                        const salidaEfectiva = new Date(Math.min(par.salida.getTime(), finOficial.getTime()));
+                        // 🔥 REGLA DE JUSTIFICACIÓN: Se le paga el 100% de los minutos oficiales
+                        if (par.esJustificado) {
+                            minutosTrabajados = Math.round((finOficial - inicioOficial) / (1000 * 60));
+                        } else {
+                            // Cálculo estricto normal
+                            const entradaEfectiva = new Date(Math.max(par.entrada.getTime(), inicioOficial.getTime()));
+                            const salidaEfectiva = new Date(Math.min(par.salida.getTime(), finOficial.getTime()));
 
-                        if (salidaEfectiva > entradaEfectiva) {
-                            minutosTrabajados = Math.round((salidaEfectiva - entradaEfectiva) / (1000 * 60));
+                            if (salidaEfectiva > entradaEfectiva) {
+                                minutosTrabajados = Math.round((salidaEfectiva - entradaEfectiva) / (1000 * 60));
+                            }
                         }
+                    } else if (!par.esJustificado && par.entrada && par.salida) {
+                        minutosTrabajados = Math.round((par.salida - par.entrada) / (1000 * 60));
                     }
-                } else {
+                } else if (!par.esJustificado && par.entrada && par.salida) {
                     minutosTrabajados = Math.round((par.salida - par.entrada) / (1000 * 60));
                 }
 
@@ -312,11 +346,15 @@ export const getNominaDetalle = async (req, res) => {
             }
 
             par.estatusList.forEach(est => {
+                // Si la clase está justificada, solo mostramos eso y omitimos lo malo
+                if (par.esJustificado && est !== 'Justificado') return; 
+                
                 const desc = `${est} en ${par.materia.nombre || 'Clase'}`;
                 if (!nomina[docenteId].incidencias.includes(desc)) nomina[docenteId].incidencias.push(desc);
             });
 
-            if (par.entrada && !par.salida) {
+            // Si está justificado, tampoco marcamos "Omisión de salida"
+            if (par.entrada && !par.salida && !par.esJustificado) {
                 const descOmision = `Omisión de salida en ${par.materia.nombre || 'Clase'}`;
                 if (!nomina[docenteId].incidencias.includes(descOmision)) {
                     nomina[docenteId].incidencias.push(descOmision);

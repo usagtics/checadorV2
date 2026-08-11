@@ -67,8 +67,8 @@ export default function DashboardDirectivoPage() {
   const totalDocentes = Array.isArray(docentes) ? docentes.length : 0;
   const totalGrupos = Array.isArray(grupos) ? grupos.length : 0;
   
-  const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-  const diasOperativos = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado']; // Días a mostrar en el Grid
+  const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+  const diasOperativos = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']; 
   const diaHoy = diasSemana[new Date().getDay()];
   
   const clasesHoy = Array.isArray(ofertasActivas) 
@@ -161,13 +161,11 @@ export default function DashboardDirectivoPage() {
               <p className="text-gray-400 text-xs font-medium mt-1 uppercase tracking-widest">Vista detallada de los docentes asignados a tu carrera</p>
             </div>
 
-            {/* --- CONTENEDOR DE TARJETAS TIPO HORARIO --- */}
             <div className="px-6 md:px-10 pt-8 space-y-8">
               {cargaPorDocente.length > 0 ? (
                 cargaPorDocente.map((carga, idx) => (
                   <div key={idx} className="bg-white rounded-3xl border border-gray-200 shadow-sm overflow-hidden">
                     
-                    {/* ENCABEZADO DEL DOCENTE */}
                     <div className="bg-blue-50/50 px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 bg-white text-blue-900 rounded-xl flex items-center justify-center font-black text-lg border border-gray-200 shadow-sm">
@@ -189,12 +187,10 @@ export default function DashboardDirectivoPage() {
                       </div>
                     </div>
 
-                    {/* HORARIO SEMANAL (GRID) */}
                     <div className="p-6 overflow-x-auto">
                       <div className="min-w-[900px] grid grid-cols-6 gap-4">
                         
                         {diasOperativos.map((diaStr) => {
-                          // Extraemos las clases que caen en este día específico y las aplanamos
                           const clasesDelDia = carga.clases.flatMap(oferta => {
                             const horariosDia = oferta.horarios?.filter(h => 
                               (h.diaSemana || h.dia || '').toLowerCase() === diaStr.toLowerCase()
@@ -206,7 +202,6 @@ export default function DashboardDirectivoPage() {
                             }));
                           });
 
-                          // Ordenamos las clases del día cronológicamente
                           clasesDelDia.sort((a, b) => a.horarioEspecifico.horaInicio.localeCompare(b.horarioEspecifico.horaInicio));
 
                           return (

@@ -50,17 +50,6 @@ const NominaPage = () => {
   const [fechaInicio, setFechaInicio] = useState(periodoPorDefecto.inicioStr);
   const [fechaFin, setFechaFin] = useState(periodoPorDefecto.finStr);
 
-  const formatoTiempo = (horasDecimales) => {
-    if (!horasDecimales || horasDecimales <= 0) return "0 hr";
-    const hrs = Math.floor(horasDecimales);
-    const mins = Math.round((horasDecimales - hrs) * 60);
-    
-    if (hrs === 0 && mins === 0) return "0 hr";
-    if (hrs === 0) return `${mins} min`;
-    if (mins === 0) return `${hrs} hr`;
-    return `${hrs} hr ${mins} min`;
-  };
-
   // 👇 NUEVO EFECTO: Consulta los datos automáticamente al cambiar las fechas 👇
   useEffect(() => {
       const cargarPrevisualizacion = async () => {
@@ -107,7 +96,6 @@ const NominaPage = () => {
       cargarPrevisualizacion();
   }, [fechaInicio, fechaFin]);
 
-  // Actualizamos la función para que use los datos que ya están en memoria
   const generarNomina = async (tipoRecibo) => {
       if (datosNomina.length === 0) {
           alert("No hay registros en este periodo para exportar.");
@@ -147,24 +135,19 @@ const NominaPage = () => {
     doc.text(`Período de pago: ${formatoFechaPDF(strInicio)} al ${formatoFechaPDF(strFin)}`, 148, 30, { align: 'center' });
 
     let totalGeneral = 0;
-    let totalSab = 0, totalDom = 0, totalMat = 0, totalLin = 0;
     
     const tableRows = datos.map((d, index) => {
       const listaIncidencias = d.incidencias ? d.incidencias : ""; 
-      
       totalGeneral += d.total;
-      totalSab += d.horasSabatinas || 0;
-      totalDom += d.horasDominicales || 0;
-      totalMat += d.horasMatutinas || 0;
-      totalLin += d.horasLinea || 0;
       
+      // 🚨 FIX: Se envían directamente los textos desde el backend (ej: "4 hr 30 min")
       return [
         index + 1,
         d.nombre.toUpperCase(),
-        formatoTiempo(d.horasSabatinas),
-        formatoTiempo(d.horasDominicales), 
-        formatoTiempo(d.horasMatutinas),
-        formatoTiempo(d.horasLinea),
+        d.horasSabatinas,
+        d.horasDominicales, 
+        d.horasMatutinas,
+        d.horasLinea,
         `$${d.total.toFixed(2)}`, 
         d.metodoPago,
         listaIncidencias 
@@ -172,11 +155,7 @@ const NominaPage = () => {
     });
 
     tableRows.push([
-        { content: "TOTALES", colSpan: 2, styles: { fontStyle: 'bold', halign: 'right' } },
-        formatoTiempo(totalSab), 
-        formatoTiempo(totalDom), 
-        formatoTiempo(totalMat), 
-        formatoTiempo(totalLin), 
+        { content: "TOTAL A PAGAR", colSpan: 6, styles: { fontStyle: 'bold', halign: 'right' } },
         { content: `$${totalGeneral.toFixed(2)}`, styles: { fontStyle: 'bold' } }, 
         "", ""
     ]);
@@ -229,8 +208,6 @@ const NominaPage = () => {
     datos.forEach((docente) => {
         const doc = new jsPDF('portrait'); 
 
-        const horasTrabajadas = (docente.horasMatutinas || 0) + (docente.horasSabatinas || 0) + (docente.horasDominicales || 0) + (docente.horasLinea || 0);
-
         const dibujarRecibo = (startY, tipoCopia) => {
             doc.addImage(logoEmpresa, 'PNG', 20, startY, 35, 20); 
 
@@ -276,26 +253,20 @@ const NominaPage = () => {
             doc.setFontSize(8);
             doc.text("Desglose de tiempo pagado:", 25, startY + 58);
             doc.setFont("helvetica", "normal");
-            doc.text(`Matutinas: ${formatoTiempo(docente.horasMatutinas)}`, 30, startY + 63);
-            doc.text(`Sabatinas: ${formatoTiempo(docente.horasSabatinas)}`, 30, startY + 68);
-            doc.text(`Dominicales: ${formatoTiempo(docente.horasDominicales)}`, 30, startY + 73);
-            doc.text(`En Línea: ${formatoTiempo(docente.horasLinea)}`, 30, startY + 78);
+            // 🚨 FIX: Se envían directamente los textos desde el backend sin la función de formato
+            doc.text(`Matutinas: ${docente.horasMatutinas}`, 30, startY + 63);
+            doc.text(`Sabatinas: ${docente.horasSabatinas}`, 30, startY + 68);
+            doc.text(`Dominicales: ${docente.horasDominicales}`, 30, startY + 73);
+            doc.text(`En Línea: ${docente.horasLinea}`, 30, startY + 78);
 
             doc.setFont("helvetica", "bold");
-            doc.text("Reporte del Checador:", 110, startY + 58);
+            doc.text("Reporte de Incidencias:", 110, startY + 58);
             doc.setFont("helvetica", "normal");
-            doc.text(`Total Trabajado: ${formatoTiempo(horasTrabajadas)}`, 115, startY + 63);
-            
-            doc.text("Incidencias: ", 115, startY + 68);
             doc.setTextColor(239, 68, 68); 
-            doc.text(docente.incidencias || "Ninguna reportada", 135, startY + 68, { maxWidth: 50 });
+            doc.text(docente.incidencias || "Ninguna reportada", 115, startY + 63, { maxWidth: 70 });
             doc.setTextColor(0, 0, 0);
 
             doc.line(20, startY + 85, 190, startY + 85);
-
-            doc.setFontSize(9);
-            doc.setFont("helvetica", "bold");
-            doc.text(`Horas Remuneradas: ${formatoTiempo(horasTrabajadas)}`, 25, startY + 92);
 
             doc.setFontSize(12);
             doc.text("TOTAL A PAGAR:", 100, startY + 92);
