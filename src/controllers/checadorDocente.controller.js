@@ -323,6 +323,12 @@ export const getNominaDetalle = async (req, res) => {
                     minutosTrabajados = Math.round((par.salida - par.entrada) / (1000 * 60));
                 }
 
+                // 🌟 REGLA DE REDONDEO INYECTADA 🌟
+                // Redondea a la media hora más cercana (30 min). 
+                // Ej: 1 hr 20 min -> 1 hr 30 min. 1 hr 10 min -> 1 hr 0 min.
+                // Si prefieres cerrarlo a 15 min o 60 min, solo cambia el "30" de aquí abajo.
+                minutosTrabajados = Math.round(minutosTrabajados / 30) * 30;
+
                 let turnoClase = 'Matutino';
                 if (oferta) turnoClase = oferta.turno || oferta.grupo?.turno || par.docente.turno || 'Matutino';
                 else turnoClase = par.grupo?.turno || par.docente.turno || 'Matutino';
