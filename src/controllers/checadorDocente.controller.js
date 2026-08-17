@@ -225,7 +225,12 @@ export const getNominaDetalle = async (req, res) => {
             const docenteId = registro.docente._id.toString();
             const materiaId = registro.materia._id.toString();
             const fechaCorta = registro.fecha.toLocaleDateString('en-CA'); 
-            const llaveUnica = `${docenteId}_${fechaCorta}_${materiaId}`; 
+            
+            // CORRECCIÓN: Extraemos el ID del grupo para evitar que se sobrescriban clases iguales
+            const grupoId = registro.grupo ? registro.grupo._id.toString() : 'sin-grupo';
+            
+            // CORRECCIÓN: Agregamos el grupo a la llave única
+            const llaveUnica = `${docenteId}_${fechaCorta}_${materiaId}_${grupoId}`; 
 
             if (!emparejamiento[llaveUnica]) {
                 emparejamiento[llaveUnica] = { 
@@ -236,13 +241,12 @@ export const getNominaDetalle = async (req, res) => {
                     grupo: registro.grupo, 
                     fechaFisica: registro.fecha, 
                     estatusList: [],
-                    esJustificado: false // 🔥 Nuevo campo para marcar si la clase completa está justificada
+                    esJustificado: false 
                 };
             }
             if (registro.tipoRegistro === 'Entrada' && !emparejamiento[llaveUnica].entrada) emparejamiento[llaveUnica].entrada = registro.fecha;
             if (registro.tipoRegistro === 'Salida') emparejamiento[llaveUnica].salida = registro.fecha;
             
-            // Si cualquier registro del día dice "Justificado", marcamos toda la clase como perdonada
             if (registro.estatus === 'Justificado') {
                 emparejamiento[llaveUnica].esJustificado = true;
                 emparejamiento[llaveUnica].estatusList.push('Justificado');
@@ -275,7 +279,6 @@ export const getNominaDetalle = async (req, res) => {
                 };
             }
 
-            // 🔥 FIX: Procesar el pago si tiene Entrada y Salida, O SI ESTÁ JUSTIFICADO
             if ((par.entrada && par.salida && par.salida > par.entrada) || par.esJustificado) {
                 let minutosTrabajados = 0; 
                 
@@ -301,8 +304,8 @@ export const getNominaDetalle = async (req, res) => {
                         const finOficial = new Date(par.fechaFisica);
                         finOficial.setHours(hFin, mFin, 0, 0);
 
-                        // 🔥 REGLA DE JUSTIFICACIÓN: Se le paga el 100% de los minutos oficiales
                         if (par.esJustificado) {
+                            // REGLA MÁGICA: Si está justificado, se pagan los minutos teóricos completos
                             minutosTrabajados = Math.round((finOficial - inicioOficial) / (1000 * 60));
                         } else {
                             // Cálculo estricto normal
