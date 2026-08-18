@@ -1,3 +1,4 @@
+
 import Docente from '../models/docentes.model.js';
 import OfertaAcademica from '../models/ofertaAcademica.model.js';
 import AsistenciaDocente from '../models/asistenciaDocente.model.js';
@@ -127,8 +128,9 @@ export const registrarAsistenciaQR = async (req, res) => {
             const inicioClaseMinutos = convertirHoraAMinutos(horarioActual.horaInicio);
             let estatusCalculado = 'A tiempo';
             
-            if (horaActualMinutos > (inicioClaseMinutos + 10)) estatusCalculado = 'Falta';
-            else if (horaActualMinutos > (inicioClaseMinutos + 5)) estatusCalculado = 'Retardo';
+            // 👇 AQUI ESTÁN LAS REGLAS DE TOLERANCIA ACTUALIZADAS 👇
+            if (horaActualMinutos > (inicioClaseMinutos + 15)) estatusCalculado = 'Falta';
+            else if (horaActualMinutos > (inicioClaseMinutos + 10)) estatusCalculado = 'Retardo';
 
             const nuevaEntrada = new AsistenciaDocente({
                 docente: docente._id,

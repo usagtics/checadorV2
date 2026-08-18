@@ -187,7 +187,32 @@ export default function AsignacionAcademicaPage() {
         }
     };
 
+    // FUNCIÓN NUEVA: Calcula las horas totales
+    const calcularHorasTotales = (ofertas) => {
+        if (!ofertas || ofertas.length === 0) return 0;
+        let totalMinutos = 0;
+
+        ofertas.forEach(oferta => {
+            if (oferta.horarios && oferta.horarios.length > 0) {
+                oferta.horarios.forEach(h => {
+                    if (h.horaInicio && h.horaFin) {
+                        const [hIni, mIni] = h.horaInicio.split(':').map(Number);
+                        const [hFin, mFin] = h.horaFin.split(':').map(Number);
+                        const inicioMinutos = (hIni * 60) + mIni;
+                        const finMinutos = (hFin * 60) + mFin;
+                        totalMinutos += (finMinutos - inicioMinutos);
+                    }
+                });
+            }
+        });
+
+        // Convierte a horas y deja 1 o 0 decimales según corresponda
+        return (totalMinutos / 60).toFixed(1).replace('.0', ''); 
+    };
+
     const docenteSeleccionado = docentes.find(d => d._id === asignacion.docente);
+    const horasAsignadasSemanales = calcularHorasTotales(docenteSeleccionado?.ofertaAcademica);
+
     const docentesOptions = docentes.map(d => ({ value: d._id, label: `${d.nombre} ${d.apellidos}` }));
     const materiasOptions = materias.map(m => ({ value: m._id, label: m.nombre }));
     const gruposOptions = grupos.map(g => ({ value: g._id, label: g.nombre }));
@@ -252,7 +277,7 @@ export default function AsignacionAcademicaPage() {
                                         <label className="text-xs font-black text-gray-600 uppercase tracking-widest pl-1">Materia</label>
                                         <SearchableSelect 
                                             options={materiasOptions} value={asignacion.materia} onChange={handleChange} name="materia" placeholder="Busca la materia"
-                                            icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>}
+                                            icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477-4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>}
                                         />
                                     </div>
 
@@ -333,7 +358,7 @@ export default function AsignacionAcademicaPage() {
                         </div>
                     </div>
 
-                    {/* PANEL DERECHO: VISOR DEL DOCENTE (AHORA EN AZUL CORPORATIVO) */}
+                    {/* PANEL DERECHO: VISOR DEL DOCENTE */}
                     <div className="flex-1 bg-blue-950 rounded-[2rem] shadow-xl border border-blue-900 flex flex-col overflow-hidden relative">
                         {/* Patrón de fondo */}
                         <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(#60a5fa 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
@@ -352,9 +377,18 @@ export default function AsignacionAcademicaPage() {
                                     <h3 className="text-2xl font-black tracking-tight text-white mb-1">
                                         {docenteSeleccionado.nombre} {docenteSeleccionado.apellidos}
                                     </h3>
-                                    <div className="flex items-center gap-4 mt-3">
-                                        <span className="bg-blue-900 text-blue-100 text-xs font-bold px-3 py-1 rounded-lg border border-blue-800">Matrícula: {docenteSeleccionado.numeroEmpleado || 'N/A'}</span>
-                                        <span className="text-blue-400 text-xs font-black uppercase tracking-widest">{docenteSeleccionado.ofertaAcademica?.length || 0} Clases asignadas</span>
+                                    <div className="flex flex-wrap items-center gap-3 mt-3">
+                                        <span className="bg-blue-900 text-blue-100 text-xs font-bold px-3 py-1.5 rounded-lg border border-blue-800">
+                                            Matrícula: {docenteSeleccionado.numeroEmpleado || 'N/A'}
+                                        </span>
+                                        <span className="bg-blue-900/50 text-blue-400 text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border border-blue-800">
+                                            {docenteSeleccionado.ofertaAcademica?.length || 0} Clases
+                                        </span>
+                                        {/* 👇 ETIQUETA INYECTADA PARA HORAS TOTALES 👇 */}
+                                        <span className="bg-emerald-900/60 text-emerald-400 text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border border-emerald-800/50 flex items-center gap-1.5 shadow-sm shadow-emerald-900/20">
+                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                            {horasAsignadasSemanales} Horas semanales
+                                        </span>
                                     </div>
                                 </div>
 

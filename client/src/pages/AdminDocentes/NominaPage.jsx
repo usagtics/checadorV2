@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -50,14 +51,20 @@ const NominaPage = () => {
   const [fechaInicio, setFechaInicio] = useState(periodoPorDefecto.inicioStr);
   const [fechaFin, setFechaFin] = useState(periodoPorDefecto.finStr);
 
-  // 👇 NUEVO EFECTO: Consulta los datos automáticamente al cambiar las fechas 👇
+  // 👇 EFECTO CORREGIDO: Evita las Condiciones de Carrera 👇
   useEffect(() => {
+      let ignorarResultado = false;
+
       const cargarPrevisualizacion = async () => {
           if (!fechaInicio || !fechaFin) return;
           
           setCargandoPreview(true);
           try {
               const res = await getNominaRequest(fechaInicio, fechaFin);
+              
+              // Si el usuario cambió las fechas, ignoramos estos datos viejos
+              if (ignorarResultado) return;
+
               const datos = res.data;
               setDatosNomina(datos);
               
@@ -89,11 +96,19 @@ const NominaPage = () => {
           } catch (error) {
               console.error("Error al cargar previsualización:", error);
           } finally {
-              setCargandoPreview(false);
+              // Solo quitamos el estado de carga si la petición sigue siendo válida
+              if (!ignorarResultado) {
+                  setCargandoPreview(false);
+              }
           }
       };
 
       cargarPrevisualizacion();
+
+      // Limpieza de React: se ejecuta al cambiar las fechas y mata la petición anterior
+      return () => {
+          ignorarResultado = true;
+      };
   }, [fechaInicio, fechaFin]);
 
   const generarNomina = async (tipoRecibo) => {
@@ -140,7 +155,7 @@ const NominaPage = () => {
       const listaIncidencias = d.incidencias ? d.incidencias : ""; 
       totalGeneral += d.total;
       
-      // 🚨 FIX: Se envían directamente los textos desde el backend (ej: "4 hr 30 min")
+      // Se envían directamente los textos desde el backend (ej: "4 hr 30 min")
       return [
         index + 1,
         d.nombre.toUpperCase(),
@@ -253,7 +268,8 @@ const NominaPage = () => {
             doc.setFontSize(8);
             doc.text("Desglose de tiempo pagado:", 25, startY + 58);
             doc.setFont("helvetica", "normal");
-            // 🚨 FIX: Se envían directamente los textos desde el backend sin la función de formato
+            
+            // Se envían directamente los textos desde el backend sin la función de formato
             doc.text(`Matutinas: ${docente.horasMatutinas}`, 30, startY + 63);
             doc.text(`Sabatinas: ${docente.horasSabatinas}`, 30, startY + 68);
             doc.text(`Dominicales: ${docente.horasDominicales}`, 30, startY + 73);
