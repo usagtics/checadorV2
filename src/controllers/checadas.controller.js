@@ -1,4 +1,4 @@
-import  Checada  from "../models/checadas.model.js";
+import Checada from "../models/checadas.model.js";
 import Plantel from "../models/planteles.model.js";
 import dayjs from "dayjs";
 import Empleado from "../models/empleados.model.js"; 
@@ -8,9 +8,11 @@ export const registrarChecada = async (req, res) => {
   try {
     console.log("\n--- INICIANDO REGISTRO DE CHECADA ---");
     
-const { plantelId, plantel: plantelBody, empleadoId } = req.body;
+    // Captura robusta: unificamos plantelId y plantel para evitar errores 400
+    const { plantelId, plantel: plantelBody, empleadoId } = req.body;
     const idPlantelReal = plantelId || plantelBody;
-        const fotoUrl = req.file ? `/uploads/${req.file.filename}` : null;
+    
+    const fotoUrl = req.file ? `/uploads/${req.file.filename}` : null;
 
     if (!idPlantelReal || !empleadoId) {
       return res.status(400).json({ message: "Faltan datos obligatorios." });
@@ -18,6 +20,7 @@ const { plantelId, plantel: plantelBody, empleadoId } = req.body;
 
     const plantel = await Plantel.findById(idPlantelReal);
     if (!plantel) return res.status(400).json({ message: "Plantel no encontrado." });
+
     // --- VALIDACIÓN IP ---
     let ipDetectada = req.headers['x-client-ip'] || 
                       req.headers['x-original-forwarded-for'] || 
@@ -119,22 +122,19 @@ const { plantelId, plantel: plantelBody, empleadoId } = req.body;
             }
         } else {
             console.log("⚠️ ALERTA: No se encontró la hora de entrada en el objeto tipoHorario.");
-            // Opcional: Marcar como error de datos
             status = "Sin Horario";
         }
     }
     
     if (tipo === "salida") {
        status = "Salida Registrada";
-       // Aquí podrías agregar lógica de salida anticipada si quisieras
     }
 
-    // Guardar en BD
-// Guardar en BD
+    // Guardar en BD usando idPlantelReal unificado
     const nuevaChecada = await Checada.create({
       empleado: empleadoId,
       tipo,
-      plantel: idPlantelReal, // Reemplaza plantelId por esta variable unificada
+      plantel: idPlantelReal,
       tarde,
       status, 
       hora: ahora.toDate(),
@@ -150,18 +150,12 @@ const { plantelId, plantel: plantelBody, empleadoId } = req.body;
       checada: nuevaChecada,
     });
 
-    console.log(`✅ Checada guardada con éxito. Estatus final: ${status}`);
-
-    return res.status(201).json({
-      message: `Checada registrada: ${status}`,
-      checada: nuevaChecada,
-    });
-
   } catch (error) {
     console.error("❌ Error fatal al registrar checada:", error);
     res.status(500).json({ message: "Error interno del servidor", error: error.message });
   }
 };
+
 // ==========================================
 // 2. LISTAR CHECADAS (CON STATUS)
 // ==========================================
@@ -181,7 +175,7 @@ export const listarChecadas = async (req, res) => {
       .populate({
         path: "plantel", 
         select: "nombre",
-      }); // Aquí ya te trae el nombre del plantel
+      });
 
     res.json(checadas);
   } catch (error) {
@@ -199,7 +193,6 @@ export const generarReporteChecadas = async (req, res) => {
         const filtros = {};
     
         if (fechaInicio && fechaFin) {
-          // Ajustar fechas para cubrir todo el día
           const start = new Date(fechaInicio); start.setHours(0,0,0,0);
           const end = new Date(fechaFin); end.setHours(23,59,59,999);
           
@@ -221,14 +214,9 @@ export const generarReporteChecadas = async (req, res) => {
           })
           .populate({
             path: 'plantel',
-            select: 'nombre direccion', // Nos aseguramos de traer el nombre del campus
+            select: 'nombre direccion',
           });
         
-        // El resultado 'checadas' ya incluirá:
-        // 1. checada.plantel.nombre (El campus)
-        // 2. checada.status (Asistencia, Retardo, Falta)
-        // 3. checada.hora (La hora exacta)
-
         res.status(200).json({ checadas });
       } catch (error) {
         console.error("Error al generar reporte de checadas:", error);
@@ -243,7 +231,6 @@ export const obtenerEstadisticasHoy = async (req, res) => {
 
     let inicio, fin;
 
-    // Configuración de fechas del filtro principal
     if (fechaInicio && fechaFin) {
       inicio = dayjs(fechaInicio).startOf('day').toDate();
       fin = dayjs(fechaFin).endOf('day').toDate();
@@ -257,12 +244,10 @@ export const obtenerEstadisticasHoy = async (req, res) => {
       hora: { $gte: inicio, $lte: fin }
     };
 
-    // 1. Contadores Globales
     const asistencias = await Checada.countDocuments({ ...filtroBase, status: 'Asistencia' });
     const retardos = await Checada.countDocuments({ ...filtroBase, status: 'Retardo' });
     const faltas = await Checada.countDocuments({ ...filtroBase, status: 'Falta' });
 
-    // 2. Desglose por Plantel
     const todosLosPlanteles = await Plantel.find({}, 'nombre _id');
     const statsChecadas = await Checada.aggregate([
         { $match: filtroBase },
@@ -288,7 +273,6 @@ export const obtenerEstadisticasHoy = async (req, res) => {
         };
     });
 
-    // 3. Historial Por Mes (Del año en curso)
     const inicioAnio = dayjs(inicio).startOf('year').toDate();
     const finAnio = dayjs(inicio).endOf('year').toDate();
 
@@ -318,16 +302,12 @@ export const obtenerEstadisticasHoy = async (req, res) => {
         };
     });
 
-    // ======================================================
-    // 4. NUEVO: TOP INCIDENCIAS (FALTAS Y RETARDOS)
-    // ======================================================
-    // Esto es lo que faltaba para el widget de la derecha
     const topRetardos = await Checada.aggregate([
       {
         $match: {
           tipo: 'entrada',
-          hora: { $gte: inicio, $lte: fin }, // Respetamos el filtro de fecha seleccionado
-status: { $in: ["Retardo", "Falta"] }
+          hora: { $gte: inicio, $lte: fin },
+          status: { $in: ["Retardo", "Falta"] }
         }
       },
       {
@@ -337,21 +317,20 @@ status: { $in: ["Retardo", "Falta"] }
         }
       },
       { $sort: { total: -1 } }, 
-      { $limit: 5 }, // Top 5
+      { $limit: 5 },
       {
         $lookup: {
-          from: "employees", // <--- CAMBIO: De "empleados" a "employees"
-          localField: "_id", // El ID del empleado en la colección Checadas
-          foreignField: "_id", // El ID en la colección Employees
+          from: "employees",
+          localField: "_id",
+          foreignField: "_id",
           as: "datosEmpleado"
         }
       },
       { $unwind: "$datosEmpleado" },
       {
         $project: {
-          // Mapeamos los campos para que el Frontend los entienda
-          nombre: "$datosEmpleado.name", // OJO: En 'listarChecadas' usas .name, ajusta si es .nombre
-          apellidos: "$datosEmpleado.apellidos", // Si existe
+          nombre: "$datosEmpleado.name",
+          apellidos: "$datosEmpleado.apellidos",
           departamento: "$datosEmpleado.departamento",
           total: 1
         }
@@ -364,7 +343,7 @@ status: { $in: ["Retardo", "Falta"] }
       faltas,
       porPlantel,
       porMes: datosPorMes,
-      topRetardos, // <--- Enviamos el array al frontend
+      topRetardos,
       rango: { inicio, fin }
     });
 
@@ -373,3 +352,4 @@ status: { $in: ["Retardo", "Falta"] }
     res.status(500).json({ message: "Error al cargar estadísticas" });
   }
 };
+
