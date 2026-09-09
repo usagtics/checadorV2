@@ -1,11 +1,9 @@
-import axios from "axios";
-
-const API_URL = "http://localhost:4000/api"; 
+import axios from "./axios";
 
 // Solicitar el post de una checada
 export const postChecadaRequest = async (data) => {
   try {
-    const response = await axios.post(`${API_URL}/checadas`, data);
+    const response = await axios.post(`/checadas`, data);
     return response.data;
   } catch (error) {
     console.error("Error al registrar checada:", error);
@@ -15,7 +13,7 @@ export const postChecadaRequest = async (data) => {
 
 export const getChecadasRequest = async (empleadoId) => {
   try {
-    const response = await axios.get(`${API_URL}/checadas/${empleadoId}`);
+    const response = await axios.get(`/checadas/${empleadoId}`);
     return response.data;
   } catch (error) {
     console.error("Error al obtener checadas del empleado:", error);
@@ -25,8 +23,8 @@ export const getChecadasRequest = async (empleadoId) => {
 
 export const getReporteChecadasRequest = async (params = {}) => {
   try {
-    return axios.get(`${API_URL}/reporte`, { params }); 
-    return response.data;
+    const response = await axios.get(`/reporte`, { params }); 
+    return response; 
   } catch (error) {
     console.error("Error al obtener reporte de checadas:", error);
     throw error;

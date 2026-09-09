@@ -14,6 +14,7 @@ export const registrarChecada = async (req, res) => {
     
     console.log("Valores recibidos -> plantel:", idPlantelReal, "empleado:", empleadoId);
 
+    const baseUrl = process.env.BACKEND_URL || 'https://api.asiste-usag.com.mx';
     const fotoUrl = req.file ? `/uploads/${req.file.filename}` : null;
 
     if (!idPlantelReal || !empleadoId) {

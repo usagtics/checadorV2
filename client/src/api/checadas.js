@@ -1,10 +1,8 @@
 // api/checadas.js
-import axios from "axios";
-
-const API_URL = "http://localhost:4000/api"; 
+import axios from "./axios";
 
 export const postChecadaRequest = (data) => {
-  return axios.post(`${API_URL}/checadas`, data, {
+  return axios.post(`/checadas`, data, {
     headers: {
       'Content-Type': 'multipart/form-data'
     }
@@ -12,10 +10,9 @@ export const postChecadaRequest = (data) => {
 };
 
 export const getChecadasRequest = (empleadoId) => {
-  return axios.get(`${API_URL}/checadas/${empleadoId}`);
+  return axios.get(`/checadas/${empleadoId}`);
 };
 
-// 👇 AQUÍ ESTABA EL ERROR: Agregamos ${API_URL} al principio
 export const getStatsRequest = (params) => {
-  return axios.get(`${API_URL}/checadas/stats`, { params });
+  return axios.get(`/checadas/stats`, { params });
 };
