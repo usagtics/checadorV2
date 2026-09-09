@@ -3,9 +3,8 @@ import { useForm } from "react-hook-form";
 import { useEmployees } from "../../context/EmpleadoContext";
 import { useNavigate, useParams } from "react-router-dom";
 import MenuAdmin from "../../menu/menuAdmin";
-import axios from "axios";
+import axios from "../../api/axios.js"; 
 
-// Interfaces (Opcionales si no usas TypeScript estricto)
 interface TipoHorario {
   _id: string;
   nombre: string;
@@ -44,12 +43,13 @@ function EmployeesFormPage() {
     const fetchData = async () => {
       try {
         const [resHorarios, resPlanteles] = await Promise.all([
-          axios.get("http://localhost:4000/api/tipohorarios"),
-          axios.get("http://localhost:4000/api/planteles"),
+          axios.get("/tipohorarios"),
+          axios.get("/planteles"),
         ]);
 
-        setTiposHorario(resHorarios.data);
-        setPlanteles(resPlanteles.data);
+        // 👇 2. CAMBIO AQUÍ: Obligamos a que sean arreglos para que React no colapse
+        setTiposHorario(Array.isArray(resHorarios.data) ? resHorarios.data : []);
+        setPlanteles(Array.isArray(resPlanteles.data) ? resPlanteles.data : []);
       } catch (error) {
         console.error("Error al cargar los datos:", error);
       }
@@ -74,7 +74,6 @@ function EmployeesFormPage() {
     fetchData();
     fetchEmployee();
     
-    // CORRECCIÓN AQUÍ: Quitamos 'getEmployee' para detener el bucle
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id]); 
 
@@ -170,7 +169,8 @@ function EmployeesFormPage() {
               className="px-2 py-1 border border-gray-300 rounded-md bg-white text-gray-800 w-full my-2"
             >
               <option value="">Seleccionar plantel</option>
-              {planteles.map((p) => (
+              {/* 👇 3. CAMBIO AQUÍ: Agregamos el signo de interrogación al mapeo */}
+              {planteles?.map((p) => (
                 <option key={p._id} value={p._id}>
                   {p.nombre}
                 </option>
@@ -185,7 +185,8 @@ function EmployeesFormPage() {
               className="px-2 py-1 border border-gray-300 rounded-md bg-white text-gray-800 w-full my-2"
             >
               <option value="">Seleccionar horario</option>
-              {tiposHorario.map((tipo) => (
+              {/* 👇 4. CAMBIO AQUÍ: Agregamos el signo de interrogación al mapeo */}
+              {tiposHorario?.map((tipo) => (
                 <option key={tipo._id} value={tipo._id}>
                   {tipo.nombre}
                 </option>

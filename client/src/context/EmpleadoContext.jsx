@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useCallback } from "react";
-// Asegúrate de que las rutas de importación sean correctas según tu proyecto
 import { createEmployeeRequest, getEmployeesRequest, deleteEmployeeRequest, getEmployeeRequest, updateEmployeeRequest } from "../api/empleados";
 import Swal from "sweetalert2";
 
@@ -28,10 +27,12 @@ export function EmployeeProvider({ children }) {
     }
   }, []);
 
-  // --- FUNCIÓN PARA OBTENER HORARIOS (OPCIONAL EN CONTEXTO) ---
+  // --- FUNCIÓN PARA OBTENER HORARIOS ---
   const fetchTiposHorario = useCallback(async () => {
     try {
-      const res = await fetch("http://localhost:4000/api/tipohorarios");
+      // ✅ CORRECCIÓN: Usar variable de entorno para evitar errores de red en producción
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+      const res = await fetch(`${apiUrl}/tipohorarios`);
       const data = await res.json();
       setTiposHorario(data);
     } catch (error) {
@@ -39,13 +40,17 @@ export function EmployeeProvider({ children }) {
     }
   }, []);
 
-  // ❌ ELIMINADO: useEffect(() => { getEmployees(); ... }, [])
-  // Ya no cargamos datos aquí automáticamente. 
-  // Dejamos que EmployeePage.js decida cuándo cargar.
-
+  // --- FUNCIÓN PARA CREAR EMPLEADO ---
   const createEmployee = async (employee) => {
     try {
-      const res = await createEmployeeRequest(employee);
+      // ✅ CORRECCIÓN: Limpieza preventiva por si envían objetos completos
+      const dataToSend = {
+        ...employee,
+        plantel: typeof employee.plantel === 'object' && employee.plantel !== null ? employee.plantel._id : employee.plantel,
+        tipoHorario: typeof employee.tipoHorario === 'object' && employee.tipoHorario !== null ? employee.tipoHorario._id : employee.tipoHorario,
+      };
+
+      const res = await createEmployeeRequest(dataToSend);
       setEmployees((prevEmployees) => [...prevEmployees, res.data]);
       Swal.fire({
         icon: "success",
@@ -62,6 +67,7 @@ export function EmployeeProvider({ children }) {
     }
   };
 
+  // --- FUNCIÓN PARA ELIMINAR EMPLEADO ---
   const deleteEmployee = async (id) => {
     try {
       const confirm = await Swal.fire({
@@ -98,6 +104,7 @@ export function EmployeeProvider({ children }) {
     }
   };
 
+  // --- FUNCIÓN PARA OBTENER UN EMPLEADO ---
   const getEmployee = async (id) => {
     try {
       const res = await getEmployeeRequest(id);
@@ -110,7 +117,22 @@ export function EmployeeProvider({ children }) {
 
   const updateEmployee = async (id, employee) => {
     try {
-      const res = await updateEmployeeRequest(id, employee);
+      // 1. EL FILTRO MÁGICO: Sacamos los campos que a MongoDB/Zod no le gustan
+      const { _id, createdAt, updatedAt, __v, ...cleanEmployee } = employee;
+
+      // 2. Usamos 'cleanEmployee' en lugar de 'employee'
+      const dataToSend = {
+        ...cleanEmployee,
+        plantel: typeof cleanEmployee.plantel === 'object' && cleanEmployee.plantel !== null 
+                 ? cleanEmployee.plantel._id 
+                 : cleanEmployee.plantel,
+        tipoHorario: typeof cleanEmployee.tipoHorario === 'object' && cleanEmployee.tipoHorario !== null 
+                     ? cleanEmployee.tipoHorario._id 
+                     : cleanEmployee.tipoHorario,
+      };
+
+      // Enviamos la data limpia
+      const res = await updateEmployeeRequest(id, dataToSend);
       console.log("Respuesta del update:", res.data);
 
       setEmployees((prevEmployees) =>
@@ -133,7 +155,6 @@ export function EmployeeProvider({ children }) {
       });
     }
   };
-
   return (
     <EmployeeContext.Provider
       value={{
@@ -145,7 +166,7 @@ export function EmployeeProvider({ children }) {
         deleteEmployee,
         getEmployee,
         updateEmployee,
-        fetchTiposHorario // Exportamos esto por si quieres usarlo luego
+        fetchTiposHorario
       }}
     >
       {children}

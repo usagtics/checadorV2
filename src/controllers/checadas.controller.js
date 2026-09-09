@@ -3,23 +3,21 @@ import Plantel from "../models/planteles.model.js";
 import dayjs from "dayjs";
 import Empleado from "../models/empleados.model.js"; 
 
-// ==========================================
-// 1. REGISTRAR CHECADA (CON LÓGICA DE 15/20 MINUTOS)
-// ==========================================
+
 export const registrarChecada = async (req, res) => {
   try {
     console.log("\n--- INICIANDO REGISTRO DE CHECADA ---");
     
-    const { plantelId, empleadoId } = req.body;
-    const fotoUrl = req.file ? `/uploads/${req.file.filename}` : null;
+const { plantelId, plantel: plantelBody, empleadoId } = req.body;
+    const idPlantelReal = plantelId || plantelBody;
+        const fotoUrl = req.file ? `/uploads/${req.file.filename}` : null;
 
-    if (!plantelId || !empleadoId) {
+    if (!idPlantelReal || !empleadoId) {
       return res.status(400).json({ message: "Faltan datos obligatorios." });
     }
 
-    const plantel = await Plantel.findById(plantelId);
+    const plantel = await Plantel.findById(idPlantelReal);
     if (!plantel) return res.status(400).json({ message: "Plantel no encontrado." });
-
     // --- VALIDACIÓN IP ---
     let ipDetectada = req.headers['x-client-ip'] || 
                       req.headers['x-original-forwarded-for'] || 
@@ -132,16 +130,24 @@ export const registrarChecada = async (req, res) => {
     }
 
     // Guardar en BD
+// Guardar en BD
     const nuevaChecada = await Checada.create({
       empleado: empleadoId,
       tipo,
-      plantel: plantelId,
+      plantel: idPlantelReal, // Reemplaza plantelId por esta variable unificada
       tarde,
       status, 
       hora: ahora.toDate(),
       tipoHorario: empleado.tipoHorario._id,
       ipRegistrada: ipUsuario,
       fotoUrl,
+    });
+
+    console.log(`✅ Checada guardada con éxito. Estatus final: ${status}`);
+
+    return res.status(201).json({
+      message: `Checada registrada: ${status}`,
+      checada: nuevaChecada,
     });
 
     console.log(`✅ Checada guardada con éxito. Estatus final: ${status}`);
@@ -326,11 +332,11 @@ status: { $in: ["Retardo", "Falta"] }
       },
       {
         $group: {
-          _id: "$empleado", // Agrupamos por ID de empleado
+          _id: "$empleado", 
           total: { $sum: 1 }
         }
       },
-      { $sort: { total: -1 } }, // Orden descendente
+      { $sort: { total: -1 } }, 
       { $limit: 5 }, // Top 5
       {
         $lookup: {
