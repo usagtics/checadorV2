@@ -12,14 +12,34 @@ export const registrarChecada = async (req, res) => {
     const { plantelId, plantel: plantelBody, empleadoId } = req.body;
     const idPlantelReal = plantelId || plantelBody;
     
+    console.log("Valores recibidos -> plantel:", idPlantelReal, "empleado:", empleadoId);
+
     const fotoUrl = req.file ? `/uploads/${req.file.filename}` : null;
 
     if (!idPlantelReal || !empleadoId) {
       return res.status(400).json({ message: "Faltan datos obligatorios." });
     }
 
-    const plantel = await Plantel.findById(idPlantelReal);
-    if (!plantel) return res.status(400).json({ message: "Plantel no encontrado." });
+    // Búsqueda robusta y flexible del plantel (por ID o por nombre)
+    let plantel = null;
+    if (typeof idPlantelReal === 'string' && idPlantelReal.match(/^[0-9a-fA-F]{24}$/)) {
+      plantel = await Plantel.findById(idPlantelReal);
+    }
+    if (!plantel) {
+      plantel = await Plantel.findOne({ 
+        $or: [
+          { nombre: idPlantelReal },
+          { _id: idPlantelReal }
+        ]
+      });
+    }
+
+    if (!plantel) {
+      console.log("❌ Plantel no encontrado en BD para el valor:", idPlantelReal);
+      return res.status(400).json({ message: "Plantel no encontrado." });
+    }
+
+    const plantelFinalId = plantel._id;
 
     // --- VALIDACIÓN IP ---
     let ipDetectada = req.headers['x-client-ip'] || 
@@ -130,11 +150,11 @@ export const registrarChecada = async (req, res) => {
        status = "Salida Registrada";
     }
 
-    // Guardar en BD usando idPlantelReal unificado
+    // Guardar en BD usando el ID seguro del plantel encontrado
     const nuevaChecada = await Checada.create({
       empleado: empleadoId,
       tipo,
-      plantel: idPlantelReal,
+      plantel: plantelFinalId,
       tarde,
       status, 
       hora: ahora.toDate(),
@@ -352,4 +372,3 @@ export const obtenerEstadisticasHoy = async (req, res) => {
     res.status(500).json({ message: "Error al cargar estadísticas" });
   }
 };
-

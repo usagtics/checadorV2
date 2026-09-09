@@ -1,8 +1,8 @@
 import axios from 'axios';
 
 const instance = axios.create({
-    baseURL: import.meta.env.VITE_API_URL, 
-    withCredentials: true
+  baseURL: 'https://api.asiste-usag.com.mx/api', // O la ruta exacta de tu backend público
+  withCredentials: true
 });
 
 export default instance;

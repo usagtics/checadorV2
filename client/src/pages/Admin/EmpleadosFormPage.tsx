@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { useEmployees } from "../../context/EmpleadoContext";
 import { useNavigate, useParams } from "react-router-dom";
 import MenuAdmin from "../../menu/menuAdmin";
-import axios from "../../api/axios.js"; 
+import axios from "../../api/axios";
 
 interface TipoHorario {
   _id: string;
