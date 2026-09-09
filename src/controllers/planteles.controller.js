@@ -1,8 +1,8 @@
 import Plantel from '../models/planteles.model.js';
-
 export const getPlanteles = async (req, res) => {
   try {
     const planteles = await Plantel.find().exec();
+    console.log(" Planteles encontrados en la BD:", planteles); 
     return res.json(planteles);
   } catch (error) {
     console.error("Error en getPlanteles:", error);

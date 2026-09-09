@@ -133,9 +133,14 @@ const ChecadaPage: React.FC = () => {
 
 
 
-  useEffect(() => {
+useEffect(() => {
+    console.log("Cargando planteles en ChecadaPage...");
     getPlanteles();
-  }, []);
+  }, [getPlanteles]);
+
+  useEffect(() => {
+    console.log("Planteles disponibles en el componente:", planteles);
+  }, [planteles]);
 
   useEffect(() => {
     if (user?.tipoHorario) {
