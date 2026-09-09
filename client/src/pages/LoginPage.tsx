@@ -3,7 +3,6 @@ import { useAuth } from "../context/AuthContext";
 import { Link, useNavigate } from "react-router-dom";
 import { TextField, Button, InputAdornment, IconButton } from "@mui/material";
 import { useState, useEffect } from "react";
-// 👇 IMPORTANTE: Importamos los iconos reales de la librería que sí tienes
 import { FaEye, FaEyeSlash, FaLock, FaEnvelope } from "react-icons/fa"; 
 import "../styles.css";
 import usagImage from "../assets/usag.png";
@@ -30,9 +29,10 @@ function LoginPage() {
     signin(data);
   };
 
-  useEffect(() => {
+useEffect(() => {
     if (isAuthenticated && user) {
-      if (user.role === "admin") {
+      // 👇 Agregamos "super-admin" para que no se quede fuera
+      if (user.role === "admin" || user.role === "super-admin") {
         navigate("/dashboard");
       } else {
         navigate("/checadas");
@@ -50,7 +50,7 @@ function LoginPage() {
 
   return (
     <div className="relative flex h-screen items-center justify-center bg-gradient-to-br from-blue-300 via-blue-500 to-blue-700 overflow-hidden">
-      {/* ... (código de las formas flotantes igual) ... */}
+   
       {[...Array(4)].map((_, i) => (
         <div
           key={i}
@@ -88,7 +88,7 @@ function LoginPage() {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
           
-          {/* EMAIL */}
+   
           <div className="relative">
             <TextField
               type="email"
@@ -99,7 +99,7 @@ function LoginPage() {
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    {/* 👇 Usamos el componente FaEnvelope en lugar de <i> */}
+   
                     <FaEnvelope className="text-blue-500 text-lg" />
                   </InputAdornment>
                 ),

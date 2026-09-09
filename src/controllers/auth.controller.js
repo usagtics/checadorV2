@@ -6,7 +6,7 @@ import { TOKEN_SECRET } from '../config.js';
 import Employee from '../models/empleados.model.js';
 
 export const register = async (req, res) => {
-  const { email, password, username, role } = req.body;
+  const { email, password, username, role, plantel } = req.body; 
 
   try {
     const userFound = await User.findOne({ email });
@@ -14,15 +14,17 @@ export const register = async (req, res) => {
 
     let empleado = await Employee.findOne({ email });
 
-    if (!empleado && role === "client") {
+    if (!empleado && role === "employee") {
         empleado = await Employee.create({
             name: username,
             email,
-            role: "client"
+            role: "employee",
+            plantel: plantel 
         });
     }
 
-    if (!empleado && role !== "client") {
+    // Permitimos que super-admin y admin avancen sin requerir empleado previo
+    if (!empleado && role !== "employee" && role !== "super-admin" && role !== "admin") {
         return res.status(404).json({ message: "No existe un empleado registrado con este correo. Contacta a RH." });
     }
 
@@ -32,8 +34,9 @@ export const register = async (req, res) => {
       email,
       username,
       password: passwordHash,
-      role: empleado.role,
-      empleadoId: empleado._id,
+      // Si es admin o super-admin asignamos su rol directamente; si es employee, usamos el del empleado
+      role: (role === "super-admin" || role === "admin") ? role : empleado.role,
+      empleadoId: empleado ? empleado._id : null,
     });
 
     const userSaved = await newUser.save();
@@ -41,7 +44,7 @@ export const register = async (req, res) => {
     const token = await createAccessToken({ 
         id: userSaved._id, 
         role: userSaved.role,
-        empleadoId: empleado._id 
+        empleadoId: empleado ? empleado._id : null 
     });
 
     res.cookie("token", token);
@@ -50,7 +53,7 @@ export const register = async (req, res) => {
       username: userSaved.username,
       email: userSaved.email,
       role: userSaved.role,
-      empleadoId: userSaved.empleadoId,
+      empleadoId: userSaved.empleadoId || null,
       createdAt: userSaved.createdAt,
       updatedAt: userSaved.updatedAt,
     });

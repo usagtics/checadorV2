@@ -99,7 +99,9 @@ export default function GrupoFormPage() {
                                     <option value="Matutino">Matutino</option>
                                     <option value="Vespertino">Vespertino</option>
                                     <option value="Sabatino">Sabatino</option>
+                                    <option value="Dominical">Dominical</option>
                                     <option value="Virtual">Virtual</option>
+                                    
                                 </select>
                             </div>
                         </section>

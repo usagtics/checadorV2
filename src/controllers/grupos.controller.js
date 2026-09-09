@@ -1,4 +1,5 @@
 import Grupo from '../models/grupos.model.js';
+import OfertaAcademica from '../models/ofertaAcademica.model.js';
 
 export const crearGrupo = async (req, res) => {
     console.log("BODY RECIBIDO EN EL SERVER:", req.body);
@@ -24,16 +25,35 @@ export const crearGrupo = async (req, res) => {
 
 export const obtenerGrupos = async (req, res) => {
     try {
-        // Hacemos una copia de req.query para no mutar el objeto original
-        const filtros = { ...req.query }; 
+        let idsGruposEnPeriodo = null;
         
-        // --- FILTRO DE SEGURIDAD PARA DIRECTIVOS ---
-        // Si el usuario existe, NO es super-admin, y tiene carreras asignadas, aplicamos el candado
-        if (req.user && req.user.role !== 'super-admin' && req.user.carreras && req.user.carreras.length > 0) {
-            filtros.carrera = { $in: req.user.carreras };
+        if (req.query.periodo) {
+            const ofertasDelPeriodo = await OfertaAcademica.find({ periodo: req.query.periodo }).select('grupo');
+            idsGruposEnPeriodo = ofertasDelPeriodo.map(o => o.grupo);
         }
+
+        const query = {};
         
-        const grupos = await Grupo.find(filtros);
+        if (idsGruposEnPeriodo) {
+            query._id = { $in: idsGruposEnPeriodo };
+        }
+
+        // Copiamos otros filtros si el usuario mandó programa u otros parámetros
+        if (req.query.programa) {
+            query.programa = req.query.programa;
+        }
+
+        // 3. Consultamos los grupos iniciales
+        let grupos = await Grupo.find(query);
+
+        // 4. Aplicamos el filtro de seguridad de carreras en memoria o mediante lógica limpia
+        if (req.user && req.user.role !== 'super-admin' && req.user.carreras && req.user.carreras.length > 0) {
+            grupos = grupos.filter(g => {
+                // Si el grupo no tiene carrera asignada o su carrera coincide con las permitidas del directivo, pasa
+                return !g.carrera || req.user.carreras.map(c => c.toString()).includes(g.carrera.toString());
+            });
+        }
+
         res.json(grupos);
     } catch (error) {
         res.status(500).json({ message: 'Error al obtener grupos', error: error.message });

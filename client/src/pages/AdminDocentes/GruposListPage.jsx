@@ -1,18 +1,36 @@
 import React, { useEffect, useState } from 'react';
 import { useGrupos } from '../../context/GrupoContext';
+import { usePeriodos } from '../../context/PeriodoContext'; 
 import { Link } from 'react-router-dom';
-// ✅ IMPORTAMOS EL MENÚ LATERAL
 import MenuDocentes from '../../menu/MenuDocentes';
 
 export default function GruposListPage() {
   const { grupos, getGrupos, deleteGrupo } = useGrupos();
+  const { periodos, getPeriodos } = usePeriodos(); 
   
   const [busqueda, setBusqueda] = useState('');
   const [filtroPrograma, setFiltroPrograma] = useState('Todos');
+  const [filtroPeriodo, setFiltroPeriodo] = useState('');
+  useEffect(() => {
+    getPeriodos();
+  }, []);
 
   useEffect(() => {
-    getGrupos();
-  }, []);
+    if (filtroPeriodo) {
+      getGrupos({ periodo: filtroPeriodo });
+    } else {
+      getGrupos();
+    }
+  }, [filtroPeriodo]);
+
+  useEffect(() => {
+    if (periodos && periodos.length > 0 && !filtroPeriodo) {
+      const activo = periodos.find(p => p.activo);
+      if (activo) {
+        setFiltroPeriodo(activo._id);
+      }
+    }
+  }, [periodos]);
 
   const gruposFiltrados = grupos.filter((g) => {
     const coincideTexto = g.nombre.toLowerCase().includes(busqueda.toLowerCase());
@@ -75,7 +93,7 @@ export default function GruposListPage() {
                 </h1>
               </div>
               <p className="text-gray-500 font-medium text-lg md:ml-16">
-                Administra las modalidades, turnos y nomenclaturas activas.
+                Administra las modalidades, turnos y nomenclaturas activas según la oferta académica.
               </p>
             </div>
 
@@ -109,6 +127,20 @@ export default function GruposListPage() {
                 className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl pl-12 pr-4 py-3 outline-none focus:bg-white focus:border-blue-900 focus:ring-2 focus:ring-blue-100 transition-all font-bold"
               />
             </div>
+
+            {/* Select de Periodo (Oferta Académica) */}
+            <select
+              value={filtroPeriodo}
+              onChange={(e) => setFiltroPeriodo(e.target.value)}
+              className="bg-gray-50 border border-gray-200 text-gray-700 rounded-xl px-6 py-3 outline-none focus:bg-white focus:border-blue-900 focus:ring-2 focus:ring-blue-100 transition-all cursor-pointer min-w-[220px] font-bold"
+            >
+              <option value="">Todos los Periodos</option>
+              {periodos.map((p) => (
+                <option key={p._id} value={p._id}>
+                  {p.nombre} {p.activo ? '⭐' : ''}
+                </option>
+              ))}
+            </select>
 
             {/* Select de Programa */}
             <select
@@ -150,7 +182,7 @@ export default function GruposListPage() {
                   className={`group relative bg-white rounded-[2rem] p-7 border border-gray-200 shadow-sm hover:shadow-xl transition-all duration-500 overflow-hidden flex flex-col justify-between min-h-[220px] ${theme.hoverBorder} ${theme.shadow}`}
                 >
                   {/* Decoración abstracta de fondo */}
-                  <div className="absolute -right-8 -top-8 opacity-5 group-hover:opacity-10 transition-opacity duration-500 group-hover:rotate-12 group-hover:scale-110 transform">
+                  <div className="absolute -right-8 -top-8 opacity-5 group-hover:opacity-10-transition-opacity duration-500 group-hover:rotate-12 group-hover:scale-110 transform">
                     <svg width="120" height="120" viewBox="0 0 24 24" fill="currentColor" className="text-blue-900">
                       <path d="M12 2L2 22h20L12 2zm0 3.5l7.5 14.5h-15L12 5.5z"/>
                     </svg>
@@ -199,7 +231,7 @@ export default function GruposListPage() {
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <h3 className="text-xl font-black text-gray-800 mb-2">No se encontraron grupos</h3>
               <p className="text-gray-500 font-medium">
-                Intenta cambiar tu búsqueda o el filtro de programa.
+                Intenta cambiar tu búsqueda o el filtro de periodo y programa.
               </p>
             </div>
           )}
@@ -211,9 +243,9 @@ export default function GruposListPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                 </svg>
               </div>
-              <h3 className="text-2xl font-black text-gray-900 mb-2">Sin grupos activos</h3>
+              <h3 className="text-2xl font-black text-gray-900 mb-2">Sin grupos activos en este periodo</h3>
               <p className="text-gray-500 font-medium max-w-sm">
-                Comienza registrando tu primer grupo para habilitar la asignación de carga académica.
+                Comienza registrando tu primer grupo o asigna carga académica para habilitar las vistas correspondientes.
               </p>
             </div>
           )}

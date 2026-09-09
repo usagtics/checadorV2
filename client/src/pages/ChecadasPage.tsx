@@ -38,7 +38,7 @@ const ChecadaPage: React.FC = () => {
     loading,
     registrarChecada,
     obtenerChecadasEmpleado,
-  } = useChecadas();
+  } = useChecadas()
 
   const { planteles, getPlanteles } = usePlanteles();
 
@@ -87,11 +87,9 @@ const ChecadaPage: React.FC = () => {
                 footer: 'Es necesario para validar tu identidad.'
              });
         } 
-        // CASO 2: No se encontró cámara o está siendo usada por otra app
         else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
              toast.error("No se detectó ninguna cámara conectada.");
         } 
-        // CASO 3: Error genérico
         else {
              toast.error("Error al acceder a la cámara: " + error.message);
         }
@@ -100,7 +98,6 @@ const ChecadaPage: React.FC = () => {
 
     initCamera();
 
-    // Limpieza al desmontar
     return () => {
       if (mediaStream) {
         mediaStream.getTracks().forEach((track) => track.stop());
@@ -131,7 +128,11 @@ const ChecadaPage: React.FC = () => {
     return new Blob([ab], { type: mimeString });
   };
 
-  // --- CARGA DE DATOS ---
+
+
+
+
+
   useEffect(() => {
     getPlanteles();
   }, []);
