@@ -24,6 +24,7 @@ const plantelSchema = new mongoose.Schema({
   }
 }, {
   timestamps: true,
+  collection: 'planteles' 
 });
 
 plantelSchema.index({ nombre: 1 });
