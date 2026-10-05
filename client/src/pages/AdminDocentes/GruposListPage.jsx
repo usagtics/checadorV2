@@ -105,9 +105,7 @@ export default function GruposListPage() {
             </Link>
           </header>
 
-          {/* --- BARRA DE FILTROS --- */}
           <div className="bg-white border border-gray-200 p-4 rounded-2xl flex flex-col sm:flex-row gap-4 shadow-sm relative z-20">
-            {/* Input de Búsqueda */}
             <div className="relative flex-1">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -145,6 +143,7 @@ export default function GruposListPage() {
               <option value="Licenciatura">Licenciatura</option>
               <option value="TSU">TSU</option>
               <option value="Nivelación">Nivelación</option>
+               <option value="Bachille">Bachillerato</option>
             </select>
           </div>
 

@@ -7,7 +7,6 @@ import MenuDocentes from '../../menu/MenuDocentes';
 
 export default function GrupoFormPage() {
   const { createGrupo, errors: backendErrors } = useGrupos();
-  // 👇 AQUÍ ESTÁ LA CORRECCIÓN: Se cambió useCarrera() por useCarreras() 👇
   const { carreras, getCarreras } = useCarreras(); 
   const navigate = useNavigate();
 
@@ -90,6 +89,7 @@ export default function GrupoFormPage() {
                                     <option value="Licenciatura">Licenciatura</option>
                                     <option value="TSU">TSU</option>
                                     <option value="Nivelación">Nivelación</option>
+                                    <option value="Bachillerato">Bachillerato</option>
                                 </select>
                             </div>
 
