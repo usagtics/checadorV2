@@ -128,7 +128,6 @@ export const registrarAsistenciaQR = async (req, res) => {
             const inicioClaseMinutos = convertirHoraAMinutos(horarioActual.horaInicio);
             let estatusCalculado = 'A tiempo';
             
-            // 👇 AQUI ESTÁN LAS REGLAS DE TOLERANCIA ACTUALIZADAS 👇
             if (horaActualMinutos > (inicioClaseMinutos + 15)) estatusCalculado = 'Falta';
             else if (horaActualMinutos > (inicioClaseMinutos + 10)) estatusCalculado = 'Retardo';
 
@@ -198,9 +197,7 @@ export const obtenerTodasLasAsistencias = async (req, res) => {
     }
 };
 
-// ==========================================
-// ESTA ES LA ÚNICA FUNCIÓN QUE SE MODIFICÓ
-// ==========================================
+
 export const getNominaDetalle = async (req, res) => {
     try {
         const { fechaInicio, fechaFin } = req.query;
@@ -226,7 +223,6 @@ export const getNominaDetalle = async (req, res) => {
         const nomina = {};
 
         asistencias.forEach(registro => {
-            // 🛡️ VALIDACIÓN DE SEGURIDAD INYECTADA AQUÍ:
             if (!registro.docente || !registro.materia) return;
             
             const docenteId = registro.docente._id.toString();
@@ -263,7 +259,7 @@ export const getNominaDetalle = async (req, res) => {
         const formatearMinutosAHoras = (totalMinutos) => {
             if (!totalMinutos || isNaN(totalMinutos) || totalMinutos <= 0) return '0 hr';
             const horas = Math.floor(totalMinutos / 60);
-            const minutos = totalMinutos % 60;
+            const minutos = Math.round(totalMinutos % 60); 
             if (horas === 0) return `${minutos} min`;
             if (minutos === 0) return `${horas} hr`;
             return `${horas} hr ${minutos} min`;
@@ -326,7 +322,12 @@ export const getNominaDetalle = async (req, res) => {
                     minutosTrabajados = Math.round((par.salida - par.entrada) / (1000 * 60));
                 }
 
-                minutosTrabajados = Math.round(minutosTrabajados / 30) * 30;
+          
+                const esPrepa = par.grupo && par.grupo.programa === 'Bachillerato';
+
+                if (!esPrepa) {
+                    minutosTrabajados = Math.round(minutosTrabajados / 30) * 30;
+                }
 
                 let turnoClase = 'Matutino';
                 if (oferta) turnoClase = oferta.turno || oferta.grupo?.turno || par.docente.turno || 'Matutino';
@@ -334,23 +335,25 @@ export const getNominaDetalle = async (req, res) => {
                 
                 const turnoLimpio = turnoClase.toUpperCase();
 
-                if (turnoLimpio === 'SABATINO') {
-                    nomina[docenteId].minutosSabatinos += minutosTrabajados;
-                    const pagoHora = par.docente.pagoHoraSabatino || 200;
-                    nomina[docenteId].total += (minutosTrabajados / 60) * pagoHora;
-                } else if (turnoLimpio === 'DOMINICAL') {
-                    nomina[docenteId].minutosDominicales += minutosTrabajados;
-                    const pagoHora = par.docente.pagoHoraDominical || par.docente.pagoHoraSabatino || 200;
-                    nomina[docenteId].total += (minutosTrabajados / 60) * pagoHora;
-                } else if (turnoLimpio === 'LÍNEA' || turnoLimpio === 'LINEA' || turnoLimpio === 'VIRTUAL') {
-                    nomina[docenteId].minutosLinea += minutosTrabajados;
-                    const pagoHora = par.docente.pagoHoraLinea || 250;
-                    nomina[docenteId].total += (minutosTrabajados / 60) * pagoHora;
+                if (esPrepa) {
+              
+                    nomina[docenteId].minutosMatutinos += minutosTrabajados; 
+                    nomina[docenteId].total += (minutosTrabajados / 45) * 100;
                 } else {
-                    nomina[docenteId].minutosMatutinos += minutosTrabajados;
-                    const pagoHora = par.docente.pagoHoraMatutino || 200;
-                    nomina[docenteId].total += (minutosTrabajados / 60) * pagoHora;
+                    let tarifaHora;
+                    if (turnoLimpio === 'SABATINO') tarifaHora = 200; 
+                    else if (turnoLimpio === 'DOMINICAL') tarifaHora = 200;
+                    else if (turnoLimpio === 'LÍNEA' || turnoLimpio === 'LINEA' || turnoLimpio === 'VIRTUAL') tarifaHora = 250; 
+                    else tarifaHora = 200; 
+
+                    if (turnoLimpio === 'SABATINO') nomina[docenteId].minutosSabatinos += minutosTrabajados;
+                    else if (turnoLimpio === 'DOMINICAL') nomina[docenteId].minutosDominicales += minutosTrabajados;
+                    else if (turnoLimpio === 'LÍNEA' || turnoLimpio === 'LINEA' || turnoLimpio === 'VIRTUAL') nomina[docenteId].minutosLinea += minutosTrabajados;
+                    else nomina[docenteId].minutosMatutinos += minutosTrabajados;
+                    
+                    nomina[docenteId].total += (minutosTrabajados / 60) * tarifaHora;
                 }
+                
             }
 
             par.estatusList.forEach(est => {
@@ -521,3 +524,4 @@ export const getCumplimientoDocente = async (req, res) => {
         res.status(500).json({ message: "Error al generar dashboard de cumplimiento" });
     }
 };
+

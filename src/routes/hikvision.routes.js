@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import multer from 'multer';
 import dayjs from 'dayjs'; 
-
 import AsistenciaDocente from '../models/asistenciaDocente.model.js'; 
 import Docente from '../models/docentes.model.js';
 import OfertaAcademica from '../models/ofertaAcademica.model.js'; 
@@ -38,7 +37,6 @@ router.post('/eventos', upload.any(), async (req, res) => {
 
         if (docenteDb) {
             
-      
             const cincoMinutosAtras = fechaHoraChecada.subtract(5, 'minute').toDate();
             const huellaReciente = await AsistenciaDocente.findOne({
                 docente: docenteDb._id,
@@ -46,7 +44,7 @@ router.post('/eventos', upload.any(), async (req, res) => {
             });
 
             if (huellaReciente) {
-                console.log(`⏳ Anti-Spam: ${nombreDocente} acaba de checar. Ignorando huella repetida...`);
+                console.log(`Anti-Spam: ${nombreDocente} acaba de checar. Ignorando huella repetida...`);
                 return res.status(200).json({ statusCode: 1, statusString: "OK" });
             }
 
@@ -56,12 +54,13 @@ router.post('/eventos', upload.any(), async (req, res) => {
             let idGrupoObj = null; 
             let estatusChecada = 'A tiempo'; 
             
-          
+            let horaInicioClaseOficial = null; 
+            let horaFinClaseOficial = null;
+
             for (const oferta of ofertas) {
                 const claseEncontrada = oferta.horarios.find(horario => {
                     if (horario.diaSemana !== diaActual) return false;
 
-            
                     const [horaInicioH, minInicioM] = horario.horaInicio.split(':');
                     const [horaFinH, minFinM] = horario.horaFin.split(':');
 
@@ -71,14 +70,21 @@ router.post('/eventos', upload.any(), async (req, res) => {
                     const inicioPermitido = inicioClase.subtract(30, 'minute');
                     const finPermitido = finClase.add(30, 'minute'); 
 
-                    return (fechaHoraChecada.isAfter(inicioPermitido) || fechaHoraChecada.isSame(inicioPermitido)) && 
-                           (fechaHoraChecada.isBefore(finPermitido) || fechaHoraChecada.isSame(finPermitido));
+                    const estaEnRango = (fechaHoraChecada.isAfter(inicioPermitido) || fechaHoraChecada.isSame(inicioPermitido)) && 
+                                           (fechaHoraChecada.isBefore(finPermitido) || fechaHoraChecada.isSame(finPermitido));
+                    
+                    if (estaEnRango) {
+                        horaInicioClaseOficial = inicioClase;
+                        horaFinClaseOficial = finClase;
+                    }
+
+                    return estaEnRango;
                 });
 
                 if (claseEncontrada) {
                     idMateriaObj = oferta.materia;
                     idGrupoObj = oferta.grupo; 
-                    console.log(`📚 Clase detectada: Rango ${claseEncontrada.horaInicio} - ${claseEncontrada.horaFin}`);
+                    console.log(`Clase detectada: Rango ${claseEncontrada.horaInicio} - ${claseEncontrada.horaFin}`);
                     break; 
                 }
             }
@@ -95,9 +101,30 @@ router.post('/eventos', upload.any(), async (req, res) => {
                 docente: docenteDb._id,
                 fecha: { $gte: inicioDia,$lte: finDia }
             }).sort({ fecha: -1 }); 
+            
             let tipoRegistro = 'Entrada';
             if (ultimaChecadaHoy && ultimaChecadaHoy.tipoRegistro === 'Entrada') {
                 tipoRegistro = 'Salida';
+            }
+
+            if (tipoRegistro === 'Entrada') {
+                const minutosRetraso = fechaHoraChecada.diff(horaInicioClaseOficial, 'minute');
+                
+                if (minutosRetraso > 15) {
+                    estatusChecada = 'Falta';
+                } else if (minutosRetraso > 10) {
+                    estatusChecada = 'Retardo';
+                } else {
+                    estatusChecada = 'A tiempo'; 
+                }
+            } else {
+                const minutosAntes = horaFinClaseOficial.diff(fechaHoraChecada, 'minute');
+                
+                if (minutosAntes > 10) {
+                    estatusChecada = 'Salida anticipada';
+                } else {
+                    estatusChecada = 'A tiempo';
+                }
             }
 
             const nuevaAsistencia = new AsistenciaDocente({
@@ -110,10 +137,10 @@ router.post('/eventos', upload.any(), async (req, res) => {
             });
 
             await nuevaAsistencia.save();
-            console.log(`¡ÉXITO! Checada guardada como "${tipoRegistro}" en el sistema principal.`);
+            console.log(`¡ÉXITO! Checada guardada como "${tipoRegistro}" con estatus "${estatusChecada}".`);
             
         } else {
-            console.log(`⚠️ Advertencia: La matrícula ${idHikvision} no existe en la colección Docentes.`);
+            console.log(`Advertencia: La matrícula ${idHikvision} no existe en la colección Docentes.`);
         }
       }
     }

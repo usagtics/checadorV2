@@ -13,9 +13,6 @@ export const createPeriodo = async (req, res) => {
     try {
         const { nombre, fechaInicio, fechaFin, activo } = req.body;
         
-        if (activo) {
-            await Periodo.updateMany({}, { activo: false });
-        }
 
         const nuevoPeriodo = new Periodo({ nombre, fechaInicio, fechaFin, activo });
         const periodoGuardado = await nuevoPeriodo.save();
@@ -29,17 +26,15 @@ export const marcarPeriodoActivo = async (req, res) => {
     try {
         const { id } = req.params;
 
-        await Periodo.updateMany({}, { activo: false });
+        
+        const periodo = await Periodo.findById(id);
+        if (!periodo) return res.status(404).json({ message: "Periodo no encontrado" });
 
-        const periodoActivo = await Periodo.findByIdAndUpdate(
-            id, 
-            { activo: true }, 
-            { new: true }
-        );
+        periodo.activo = !periodo.activo;
+        
+        const periodoActualizado = await periodo.save();
 
-        if (!periodoActivo) return res.status(404).json({ message: "Periodo no encontrado" });
-
-        res.json(periodoActivo);
+        res.json(periodoActualizado);
     } catch (error) {
         res.status(500).json({ message: "Error al actualizar el estado del periodo" });
     }
