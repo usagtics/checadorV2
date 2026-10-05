@@ -24,27 +24,18 @@ export const crearGrupo = async (req, res) => {
 
 export const obtenerGrupos = async (req, res) => {
     try {
-        let idsGruposEnPeriodo = null;
-        
-        if (req.query.periodo) {
-            const ofertasDelPeriodo = await OfertaAcademica.find({ periodo: req.query.periodo }).select('grupo');
-            idsGruposEnPeriodo = ofertasDelPeriodo.map(o => o.grupo);
-        }
-
         const query = {};
         
-        if (idsGruposEnPeriodo) {
-            query._id = { $in: idsGruposEnPeriodo };
-        }
-
         if (req.query.programa) {
             query.programa = req.query.programa;
         }
 
-
-        if (req.user && req.user.role !== 'super-admin' && req.user.carreras && req.user.carreras.length > 0) {
-   
-            query.carrera = { $in: req.user.carreras };
+        if (req.user && req.user.role !== 'super-admin') {
+            if (req.user.carreras && req.user.carreras.length > 0) {
+                query.carrera = { $in: req.user.carreras };
+            } else {
+                return res.json([]); 
+            }
         }
 
         const grupos = await Grupo.find(query);
