@@ -1,11 +1,9 @@
 import OfertaAcademica from '../models/ofertaAcademica.model.js';
 
-// 1. Crear una nueva asignación
 export const crearOferta = async (req, res) => {
     try {
         let { docente, materia, grupo, horarios, periodo, turno } = req.body; 
 
-        // AJUSTE: Validamos si periodo es nulo, undefined O una cadena vacía
         if (!periodo || periodo === "" || periodo === "null") {
             const periodoActivo = await Periodo.findOne({ activo: true });
             
@@ -15,7 +13,6 @@ export const crearOferta = async (req, res) => {
                 });
             }
             
-            // Asignamos el ID del periodo encontrado
             periodo = periodoActivo._id;
         }
         
@@ -24,7 +21,7 @@ export const crearOferta = async (req, res) => {
             materia, 
             grupo, 
             horarios, 
-            periodo, // Ahora garantizamos que aquí siempre hay un ObjectId válido
+            periodo, 
             turno 
         });
         
@@ -43,7 +40,6 @@ export const obtenerOfertas = async (req, res) => {
     try {
         const { programa, turno, periodo } = req.query; 
         
-        // 1. Construir filtros directos
         let filtro = {};
         if (periodo) filtro.periodo = periodo;
 
@@ -51,7 +47,7 @@ export const obtenerOfertas = async (req, res) => {
         const ofertas = await OfertaAcademica.find(filtro)
             .populate('docente', 'nombre apellidos')
             .populate('materia', 'nombre')
-            .populate('periodo', 'nombre') // Asegúrate que el campo se llame 'nombre' en tu modelo Periodo
+            .populate('periodo', 'nombre') 
             .populate({
                 path: 'grupo',
                 match: { 
@@ -60,7 +56,6 @@ export const obtenerOfertas = async (req, res) => {
                 }
             });
 
-        // 3. Eliminar los que no cumplen el match del grupo
         const resultados = ofertas.filter(o => o.grupo !== null);
 
         res.json(resultados);
@@ -69,13 +64,12 @@ export const obtenerOfertas = async (req, res) => {
     }
 };
 
-// 3. Obtener una sola oferta por ID
 export const obtenerOferta = async (req, res) => {
     try {
         const oferta = await OfertaAcademica.findById(req.params.id)
             .populate('docente', 'nombre apellidos numeroEmpleado')
             .populate('materia', 'nombre clave')
-            .populate('periodo', 'nombre activo') // AQUÍ TAMBIÉN LO AGREGAMOS
+            .populate('periodo', 'nombre activo') 
             .populate('grupo', 'nombre programa turno');
             
         if (!oferta) return res.status(404).json({ message: 'Oferta académica no encontrada' });
@@ -92,7 +86,7 @@ export const actualizarOferta = async (req, res) => {
             req.body, 
             { new: true }
         )
-        .populate('periodo', 'nombre') // Importante para que el frontend no reciba un ID vacío
+        .populate('periodo', 'nombre') 
         .populate('materia', 'nombre');
         
         if (!ofertaActualizada) return res.status(404).json({ message: 'Oferta no encontrada' });
@@ -102,7 +96,6 @@ export const actualizarOferta = async (req, res) => {
     }
 };
 
-// 5. Eliminar una oferta
 export const eliminarOferta = async (req, res) => {
     try {
         const ofertaEliminada = await OfertaAcademica.findByIdAndDelete(req.params.id);

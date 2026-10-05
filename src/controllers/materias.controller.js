@@ -24,16 +24,13 @@ export const crearMateria = async (req, res) => {
 
 export const obtenerMaterias = async (req, res) => {
     try {
-        // 1. Obtenemos las carreras permitidas para este directivo
         const carrerasDelDirectivo = req.user && req.user.carreras ? req.user.carreras : [];
 
-        // 2. Si no hay usuario, no tiene carreras asignadas, o es super-admin, le mostramos todo.
-        // De lo contrario, filtramos solo por sus carreras asignadas.
+   
         const filtro = (carrerasDelDirectivo.length > 0 && req.user.role !== 'super-admin')
             ? { carreras: { $in: carrerasDelDirectivo } }
             : {};
 
-        // 3. Ejecutamos la búsqueda limpia y directa a la base de datos
         const materias = await Materia.find(filtro);
         res.json(materias);
         

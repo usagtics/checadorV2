@@ -1,7 +1,11 @@
 import axios from 'axios';
 
+const URL_BACKEND = import.meta.env.DEV 
+  ? 'http://localhost:4000/api'         
+  : 'https://api.asiste-usag.com.mx/api'; 
+
 const instance = axios.create({
-  baseURL: 'https://api.asiste-usag.com.mx/api', // O la ruta exacta de tu backend público
+  baseURL: URL_BACKEND,
   withCredentials: true
 });
 

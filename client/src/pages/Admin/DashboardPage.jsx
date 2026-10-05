@@ -4,20 +4,16 @@ import { usePlanteles } from "../../context/plantelesContext";
 import { useEmployees } from '../../context/EmpleadoContext';
 import MenuAdmin from "../../menu/menuAdmin";
 
-// ChartJS Imports
 import { 
   Chart as ChartJS, ArcElement, Tooltip, Legend, CategoryScale, 
   LinearScale, BarElement, Title 
 } from 'chart.js';
 import { Doughnut, Bar } from 'react-chartjs-2'; 
-// Iconos
 import { HiFilter, HiDownload } from "react-icons/hi";
 import { FaBuilding, FaSpinner } from "react-icons/fa"; 
 
-// Registro de componentes de ChartJS
 ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale, BarElement, Title);
 
-// --- 1. COMPONENTE TARJETA KPI ---
 const DashboardCard = ({ title, count, icon, colorIcon, borderColor }) => (
   <div className={`bg-white rounded-lg shadow-md p-6 border-l-4 ${borderColor} flex justify-between items-center transition-transform hover:scale-105 duration-200`}>
     <div>
@@ -31,10 +27,8 @@ const DashboardCard = ({ title, count, icon, colorIcon, borderColor }) => (
   </div>
 );
 
-// --- 2. COMPONENTE WIDGET "TOP INFRACTORES" (Texto Corregido) ---
 const TopOffendersWidget = ({ data = [] }) => (
   <div className="bg-white rounded-lg shadow-md p-6 h-full flex flex-col">
-    {/* CAMBIO 1: El título ahora dice Faltas/Retardos */}
     <h3 className="text-gray-700 font-bold mb-4 text-sm uppercase flex items-center gap-2 border-b border-gray-100 pb-2">
       <i className="fas fa-exclamation-triangle text-orange-500"></i> Mayor Incidencia (Faltas/Retardos)
     </h3>
@@ -54,21 +48,18 @@ const TopOffendersWidget = ({ data = [] }) => (
               
               <div className="flex flex-col">
                 <span className="text-sm font-semibold text-gray-700">
-                  {/* Nombre y Apellidos */}
                   {item.nombre} {item.apellidos} 
                 </span>
                 <span className="text-xs text-gray-400">{item.departamento || 'General'}</span>
               </div>
             </div>
 
-            {/* CAMBIO 2: La etiqueta ahora dice "Incidencias" en lugar de Retardos */}
             <span className="text-xs font-bold text-red-600 bg-red-50 px-2 py-1 rounded border border-red-100">
               {item.total} Incidencias
             </span>
           </div>
         ))
       ) : (
-        /* Estado Vacío */
         <div className="h-full flex flex-col items-center justify-center text-gray-400 text-sm italic py-8">
           <i className="fas fa-check-circle text-4xl mb-3 text-green-100"></i>
           <p>¡Excelente! Sin incidencias registradas.</p>
@@ -78,16 +69,13 @@ const TopOffendersWidget = ({ data = [] }) => (
   </div>
 );
 
-// --- 3. PÁGINA PRINCIPAL DASHBOARD ---
 function DashboardPage() {
-  // Hooks de contexto
   const { employees, getEmployees } = useEmployees();
   const { planteles, getPlanteles } = usePlanteles();
   const { stats, obtenerEstadisticas } = useChecadas();
   
   const [loading, setLoading] = useState(false);
 
-  // Función para obtener fecha local (evita problemas de UTC)
   const getLocalDate = () => {
     const d = new Date();
     return new Date(d.getTime() - (d.getTimezoneOffset() * 60000))
@@ -99,7 +87,6 @@ function DashboardPage() {
   const [fechaInicio, setFechaInicio] = useState(hoy);
   const [fechaFin, setFechaFin] = useState(hoy);
 
-  // Carga inicial de datos
   useEffect(() => {
     const cargarDatos = async () => {
         setLoading(true);
@@ -116,24 +103,19 @@ function DashboardPage() {
         }
     };
     cargarDatos();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); 
 
-  // Manejador del botón Filtrar
   const handleFiltrar = async () => {
     setLoading(true);
     await obtenerEstadisticas({ fechaInicio, fechaFin });
     setLoading(false);
   };
 
-  // --- MEMOIZACIÓN DE GRÁFICAS (Para mejor rendimiento) ---
-  
-  // Gráfica de Dona
+
   const dataDoughnut = useMemo(() => ({
     labels: ['Asistencias', 'Retardos', 'Faltas'],
     datasets: [{
         label: '# Registros',
-        // Usamos fallback "|| 0" para evitar errores si stats viene vacío
         data: [stats.asistencias || 0, stats.retardos || 0, stats.faltas || 0], 
         backgroundColor: ['#22c55e', '#eab308', '#ef4444'],
         hoverOffset: 4,
@@ -141,7 +123,6 @@ function DashboardPage() {
       }]
   }), [stats]);
 
-  // Gráfica de Barras
   const dataBar = useMemo(() => {
       const labels = stats.porMes ? stats.porMes.map(d => d.mes) : [];
       const data = stats.porMes ? stats.porMes.map(d => d.total) : [];
@@ -174,10 +155,8 @@ function DashboardPage() {
     <div className="flex min-h-screen bg-gray-50 font-sans text-gray-800">
       <MenuAdmin />
       
-      {/* Contenedor principal responsive */}
       <div className="flex-1 p-4 md:p-8 md:ml-64 transition-all w-full"> 
         
-        {/* ENCABEZADO Y FILTROS */}
         <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-8 gap-4">
             <div>
                 <h1 className="text-3xl font-extrabold text-gray-800 tracking-tight">Panel de Control</h1>
@@ -200,14 +179,12 @@ function DashboardPage() {
             </div>
         </div>
 
-        {/* LOADING OVERLAY (Solo se muestra cuando loading es true) */}
         {loading && (
             <div className="fixed top-5 right-5 z-50 bg-blue-600 text-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2 text-sm animate-pulse">
                 <FaSpinner className="animate-spin"/> Actualizando...
             </div>
         )}
 
-        {/* --- GRID DE TARJETAS KPI --- */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <DashboardCard title="ASISTENCIAS" count={stats.asistencias || 0} icon="fa-calendar-check" colorIcon="bg-green-500" borderColor="border-green-500" />
             <DashboardCard title="RETARDOS" count={stats.retardos || 0} icon="fa-clock" colorIcon="bg-yellow-500" borderColor="border-yellow-500" />
@@ -215,20 +192,16 @@ function DashboardPage() {
             <DashboardCard title="TOTAL EMPLEADOS" count={employees.length || 0} icon="fa-users" colorIcon="bg-purple-500" borderColor="border-purple-500" />
         </div>
 
-        {/* --- LAYOUT PRINCIPAL (2 Columnas) --- */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
-            {/* COLUMNA IZQUIERDA (Gráfica Barras + Tabla) */}
             <div className="lg:col-span-2 space-y-6">
                 
-                {/* Gráfica de Barras */}
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
                     <div className="h-72 w-full">
                         <Bar options={optionsBar} data={dataBar} />
                     </div>
                 </div>
 
-                {/* Tabla de Planteles */}
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                     <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
                         <h2 className="text-lg font-bold text-gray-800">Desglose por Plantel</h2>
@@ -272,16 +245,16 @@ function DashboardPage() {
                 </div>
             </div>
 
-            {/* COLUMNA DERECHA (Dona + Widget Infractores) */}
+     
             <div className="lg:col-span-1 space-y-6">
                 
-                {/* Gráfica Dona */}
+   
                 <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 flex flex-col items-center">
                     <h3 className="text-gray-800 font-bold mb-6 text-base w-full text-left">Distribución Global</h3>
                     <div className="w-full max-w-[220px] relative">
                         <Doughnut data={dataDoughnut} options={{ cutout: '75%' }} />
                         
-                        {/* Texto Flotante en el centro de la Dona */}
+        
                         <div className="absolute inset-0 flex items-center justify-center flex-col pointer-events-none">
                             <span className="text-3xl font-black text-gray-800">
                                 {(stats.asistencias || 0) + (stats.retardos || 0) + (stats.faltas || 0)}
@@ -294,7 +267,6 @@ function DashboardPage() {
                     )}
                 </div>
 
-                {/* AQUÍ ESTÁ EL WIDGET CONECTADO */}
                 <TopOffendersWidget data={stats.topRetardos || []} />
 
             </div>

@@ -36,7 +36,7 @@ export const PlantelesProvider = ({ children }) => {
       const res = await createPlantelRequest(plantel);
       if (res.data && res.data._id) {
         Swal.fire("¡Éxito!", "Plantel creado correctamente.", "success");
-        setPlanteles(prevPlanteles => [...prevPlanteles, res.data]); // Agregar el plantel creado a la lista
+        setPlanteles(prevPlanteles => [...prevPlanteles, res.data]);
       } else {
         throw new Error("El plantel no fue creado correctamente.");
       }
@@ -50,7 +50,7 @@ export const PlantelesProvider = ({ children }) => {
     try {
       const res = await deletePlantelRequest(id);
       if (res.status === 204) {
-        setPlanteles(prevPlanteles => prevPlanteles.filter((item) => item._id !== id)); // Eliminar el plantel de la lista
+        setPlanteles(prevPlanteles => prevPlanteles.filter((item) => item._id !== id)); 
         Swal.fire("Eliminado", "Plantel eliminado correctamente.", "success");
       }
     } catch (error) {
@@ -64,7 +64,7 @@ export const PlantelesProvider = ({ children }) => {
       const res = await updatePlantelRequest(id, plantel);
       if (res.data && res.data._id) {
         Swal.fire("¡Actualizado!", "El plantel fue actualizado correctamente.", "success");
-        setPlanteles(prevPlanteles => prevPlanteles.map((p) => (p._id === id ? res.data : p))); // Actualizar el plantel en la lista
+        setPlanteles(prevPlanteles => prevPlanteles.map((p) => (p._id === id ? res.data : p))); 
       } else {
         throw new Error("El plantel no fue actualizado correctamente.");
       }

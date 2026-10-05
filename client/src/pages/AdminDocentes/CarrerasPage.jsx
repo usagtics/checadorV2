@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import MenuDocentes from '../../menu/MenuDocentes'; // Ajusta la ruta de tu menú
-import api from '../../api/axios'; // Ajusta la ruta de tu instancia de axios
+import MenuDocentes from '../../menu/MenuDocentes'; 
+import api from '../../api/axios'; 
 
 export default function CarrerasPage() {
     const [carreras, setCarreras] = useState([]);
     const [errorMsg, setErrorMsg] = useState("");
     const { register, handleSubmit, reset, formState: { errors } } = useForm();
 
-    // Cargar el catálogo al entrar a la página
     const fetchCarreras = async () => {
         try {
             const res = await api.get('/carreras');
@@ -22,13 +21,13 @@ export default function CarrerasPage() {
         fetchCarreras();
     }, []);
 
-    // Función para guardar una nueva carrera
     const onSubmit = handleSubmit(async (values) => {
         try {
             setErrorMsg("");
             await api.post('/carreras', values);
-            reset(); // Limpia el formulario
-            fetchCarreras(); // Recarga la lista para que aparezca la nueva
+            reset(); 
+            fetchCarreras(); 
+            
         } catch (error) {
             setErrorMsg(error.response?.data?.message || "Error al guardar la carrera");
         }
@@ -51,7 +50,7 @@ export default function CarrerasPage() {
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         
-                        {/* 1. FORMULARIO PARA AGREGAR NUEVA CARRERA */}
+
                         <div className="lg:col-span-1 bg-white p-8 rounded-[2rem] shadow-xl border border-gray-100 h-fit">
                             <h2 className="text-sm font-black text-blue-900 uppercase tracking-widest mb-6 border-b pb-4">
                                 Nueva Carrera
@@ -107,7 +106,7 @@ export default function CarrerasPage() {
                             </form>
                         </div>
 
-                        {/* 2. LISTA DE CARRERAS (CATÁLOGO) */}
+
                         <div className="lg:col-span-2 bg-white p-8 rounded-[2rem] shadow-xl border border-gray-100">
                             <h2 className="text-sm font-black text-blue-900 uppercase tracking-widest mb-6 border-b pb-4 flex justify-between items-center">
                                 Catálogo Activo

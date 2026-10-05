@@ -8,7 +8,6 @@ export const registrarChecada = async (req, res) => {
   try {
     console.log("\n--- INICIANDO REGISTRO DE CHECADA ---");
     
-    // Captura robusta: unificamos plantelId y plantel para evitar errores 400
     const { plantelId, plantel: plantelBody, empleadoId } = req.body;
     const idPlantelReal = plantelId || plantelBody;
     
@@ -21,7 +20,6 @@ export const registrarChecada = async (req, res) => {
       return res.status(400).json({ message: "Faltan datos obligatorios." });
     }
 
-    // Búsqueda robusta y flexible del plantel (por ID o por nombre)
     let plantel = null;
     if (typeof idPlantelReal === 'string' && idPlantelReal.match(/^[0-9a-fA-F]{24}$/)) {
       plantel = await Plantel.findById(idPlantelReal);
@@ -42,7 +40,6 @@ export const registrarChecada = async (req, res) => {
 
     const plantelFinalId = plantel._id;
 
-    // --- VALIDACIÓN IP ---
     let ipDetectada = req.headers['x-client-ip'] || 
                       req.headers['x-original-forwarded-for'] || 
                       req.headers['x-forwarded-for'] || 
@@ -50,12 +47,10 @@ export const registrarChecada = async (req, res) => {
                       req.socket.remoteAddress || 
                       "NO_DETECTADA";
     
-    // Limpieza básica de IP
     let ipUsuario = String(ipDetectada).replace('::ffff:', '').split(',')[0].trim();
     
     const ipsPermitidas = (plantel.ipsPermitidas && Array.isArray(plantel.ipsPermitidas)) ? plantel.ipsPermitidas : [];
     
-    // Si hay IPs configuradas, validamos
     if (ipsPermitidas.length > 0) {
         if (!ipsPermitidas.includes(ipUsuario)) {
             console.log(`⛔ IP Rechazada: ${ipUsuario}. Permitidas: ${ipsPermitidas}`);
@@ -65,7 +60,6 @@ export const registrarChecada = async (req, res) => {
         }
     }
 
-    // --- BUSCAR EMPLEADO ---
     const empleado = await Empleado.findById(empleadoId).populate("tipoHorario");
     if (!empleado) return res.status(400).json({ message: "Empleado no encontrado." });
     if (!empleado.tipoHorario) return res.status(400).json({ message: "El empleado no tiene horario asignado." });
@@ -74,7 +68,6 @@ export const registrarChecada = async (req, res) => {
     const ahora = dayjs();
     let tipo = "entrada";
 
-    // Validar si ya checó entrada
     const existeEntradaHoy = await Checada.findOne({
       empleado: empleadoId,
       tipo: "entrada",
@@ -100,13 +93,10 @@ export const registrarChecada = async (req, res) => {
       }
     }
 
-    // VARIABLES PARA EL REPORTE
     let tarde = false;
-    let status = "Asistencia"; // Valor por defecto
+    let status = "Asistencia"; 
 
-    // 🕒 LÓGICA DE RETARDOS
     if (tipo === "entrada") {
-        // Intentamos leer la hora de entrada de ambas formas posibles
         const entradaStr = empleado.tipoHorario.hora_entrada || empleado.tipoHorario.entrada;
         
         console.log(`🕒 Horario asignado al empleado: "${entradaStr}"`);
@@ -114,10 +104,8 @@ export const registrarChecada = async (req, res) => {
         if (entradaStr) {
             const [h, m] = entradaStr.split(":");
             
-            // Creamos la fecha de hoy con la hora del horario
             const horaEntrada = dayjs().set("hour", Number(h)).set("minute", Number(m)).set("second", 0);
             
-            // Calculamos diferencia en minutos
             const diferenciaMinutos = ahora.diff(horaEntrada, 'minute');
 
             console.log(`📊 CÁLCULO DE TIEMPO:`);
@@ -126,17 +114,14 @@ export const registrarChecada = async (req, res) => {
             console.log(`   - Diferencia Minutos: ${diferenciaMinutos}`);
 
             if (diferenciaMinutos <= 15) {
-                // De 0 a 15 min tarde (o llegó antes, negativos)
                 status = "Asistencia";
                 tarde = false;
                 console.log("   -> Resultado: ASISTENCIA (A tiempo)");
             } else if (diferenciaMinutos > 15 && diferenciaMinutos <= 20) {
-                // De 16 a 20 min tarde
                 status = "Retardo";
                 tarde = true;
                 console.log("   -> Resultado: RETARDO (Tolerancia media)");
             } else if (diferenciaMinutos > 20) {
-                // Más de 20 min tarde
                 status = "Falta";
                 tarde = true; 
                 console.log("   -> Resultado: FALTA (Excedió tolerancia)");
@@ -151,7 +136,6 @@ export const registrarChecada = async (req, res) => {
        status = "Salida Registrada";
     }
 
-    // Guardar en BD usando el ID seguro del plantel encontrado
     const nuevaChecada = await Checada.create({
       empleado: empleadoId,
       tipo,
@@ -164,7 +148,7 @@ export const registrarChecada = async (req, res) => {
       fotoUrl,
     });
 
-    console.log(`✅ Checada guardada con éxito. Estatus final: ${status}`);
+    console.log(`Checada guardada con éxito. Estatus final: ${status}`);
 
     return res.status(201).json({
       message: `Checada registrada: ${status}`,
@@ -177,9 +161,7 @@ export const registrarChecada = async (req, res) => {
   }
 };
 
-// ==========================================
-// 2. LISTAR CHECADAS (CON STATUS)
-// ==========================================
+
 export const listarChecadas = async (req, res) => {
   const { id } = req.params;
   try {
@@ -204,9 +186,7 @@ export const listarChecadas = async (req, res) => {
   }
 };
 
-// ==========================================
-// 3. GENERAR REPORTE (CON PLANTEL Y STATUS)
-// ==========================================
+
 export const generarReporteChecadas = async (req, res) => {
     try {
         const { fechaInicio, fechaFin, empleadoId, plantelId } = req.query;

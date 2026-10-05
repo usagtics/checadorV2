@@ -10,11 +10,11 @@ export const ReporteChecadasProvider = ({ children }) => {
   const [fechaInicio, setFechaInicio] = useState(dayjs().startOf('month').format('YYYY-MM-DD'));
   const [fechaFin, setFechaFin] = useState(dayjs().format('YYYY-MM-DD'));
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);  // Manejo de errores
+  const [error, setError] = useState(null);  
 
   const obtenerChecadas = async () => {
     setLoading(true);
-    setError(null);  // Restablecer el error en cada nueva solicitud
+    setError(null); 
     try {
       const response = await getReporteChecadasRequest({
         empleadoId,
@@ -36,7 +36,6 @@ export const ReporteChecadasProvider = ({ children }) => {
     }
   }, [empleadoId, fechaInicio, fechaFin]);
 
-  // Agrupación de checadas por empleado
   const checadasAgrupadas = useMemo(() => {
     return checadas.reduce((acc, checada) => {
       const id = checada.empleado?._id || 'desconocido';
@@ -54,8 +53,8 @@ export const ReporteChecadasProvider = ({ children }) => {
   return (
     <ReporteChecadasContext.Provider
       value={{
-        checadas, // lista plana
-        checadasAgrupadas, // agrupadas por empleado
+        checadas, 
+        checadasAgrupadas,
         setChecadas,
         empleadoId,
         setEmpleadoId,
@@ -64,7 +63,7 @@ export const ReporteChecadasProvider = ({ children }) => {
         fechaFin,
         setFechaFin,
         loading,
-        error, // Añadimos el error para que pueda ser utilizado en los componentes
+        error, 
         obtenerChecadas,
       }}
     >

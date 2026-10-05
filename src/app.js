@@ -28,6 +28,9 @@ import teamsRoutes from './routes/teams.routes.js';
 import { obtenerToken } from './services/teamsService.js';
 import carreraRoutes from './routes/carrera.routes.js';
 
+// 👉 AQUÍ ESTÁ LA NUEVA IMPORTACIÓN
+import hikvisionRoutes from './routes/hikvision.routes.js'; 
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -51,8 +54,6 @@ app.use(cors({
   origin: [
     "http://localhost:5173",
     "http://192.168.100.78:5173", 
-    "https://checadorusag.com.mx",
-    "https://www.checadorusag.com.mx",
     "https://asiste-usag.com.mx",
     "https://www.asiste-usag.com.mx"
   ],
@@ -83,8 +84,9 @@ app.use('/api', ofertaAcademicaRoutes);
 app.use('/api', checadorDocenteRoutes);
 app.use('/api', periodosRoutes); 
 app.use("/api", carreraRoutes);
-
 app.use('/api', teamsRoutes);
+
+app.use('/api/hikvision', hikvisionRoutes);
 
 app.post("/api/upload", upload.single("photo"), (req, res) => {
   if (!req.file) {

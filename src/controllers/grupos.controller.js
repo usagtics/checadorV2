@@ -5,7 +5,6 @@ export const crearGrupo = async (req, res) => {
     console.log("BODY RECIBIDO EN EL SERVER:", req.body);
 
     try {
-        // Añadimos "carrera" para que se reciba desde el frontend
         const { nombre, programa, turno, activo, carrera } = req.body;
         
         const nuevoGrupo = new Grupo({ 
@@ -13,7 +12,7 @@ export const crearGrupo = async (req, res) => {
             programa, 
             turno, 
             activo,
-            carrera // Guardamos la carrera a la que pertenece
+            carrera
         });
         
         const grupoGuardado = await nuevoGrupo.save();
@@ -38,21 +37,17 @@ export const obtenerGrupos = async (req, res) => {
             query._id = { $in: idsGruposEnPeriodo };
         }
 
-        // Copiamos otros filtros si el usuario mandó programa u otros parámetros
         if (req.query.programa) {
             query.programa = req.query.programa;
         }
 
-        // 3. Consultamos los grupos iniciales
-        let grupos = await Grupo.find(query);
 
-        // 4. Aplicamos el filtro de seguridad de carreras en memoria o mediante lógica limpia
         if (req.user && req.user.role !== 'super-admin' && req.user.carreras && req.user.carreras.length > 0) {
-            grupos = grupos.filter(g => {
-                // Si el grupo no tiene carrera asignada o su carrera coincide con las permitidas del directivo, pasa
-                return !g.carrera || req.user.carreras.map(c => c.toString()).includes(g.carrera.toString());
-            });
+   
+            query.carrera = { $in: req.user.carreras };
         }
+
+        const grupos = await Grupo.find(query);
 
         res.json(grupos);
     } catch (error) {

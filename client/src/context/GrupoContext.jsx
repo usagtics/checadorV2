@@ -21,7 +21,6 @@ export const GrupoProvider = ({ children }) => {
     const [grupos, setGrupos] = useState([]);
     const [errors, setErrors] = useState([]);
 
-    // Listar
     const getGrupos = async (filtros) => {
         try {
             const res = await getGruposRequest(filtros);
@@ -31,7 +30,6 @@ export const GrupoProvider = ({ children }) => {
         }
     };
 
-    // Crear
     const createGrupo = async (grupo) => {
         try {
             const res = await createGrupoRequest(grupo);
@@ -43,7 +41,7 @@ export const GrupoProvider = ({ children }) => {
         }
     };
 
-    // Obtener uno solo
+  
     const getGrupo = async (id) => {
         try {
             const res = await getGrupoRequest(id);
@@ -53,7 +51,6 @@ export const GrupoProvider = ({ children }) => {
         }
     };
 
-    // ACTUALIZAR (Esta es la función interna que usa updateGrupoRequest)
     const updateGrupo = async (id, grupo) => {
         try {
             await updateGrupoRequest(id, grupo);
@@ -62,7 +59,6 @@ export const GrupoProvider = ({ children }) => {
         }
     };
 
-    // Eliminar
     const deleteGrupo = async (id) => {
         try {
             await deleteGrupoRequest(id);
@@ -79,7 +75,7 @@ export const GrupoProvider = ({ children }) => {
                 getGrupos,
                 createGrupo,
                 getGrupo,
-                updateGrupo, // <--- Esta es la que pasas al Provider
+                updateGrupo, 
                 deleteGrupo,
                 errors,
             }}

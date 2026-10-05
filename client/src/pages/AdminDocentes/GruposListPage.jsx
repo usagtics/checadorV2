@@ -38,7 +38,6 @@ export default function GruposListPage() {
     return coincideTexto && coincidePrograma;
   });
 
-  // Adaptado a Azul Marino (blue-900) para Licenciatura y detalles institucionales
   const getThemeByPrograma = (programa) => {
     switch (programa) {
       case 'TSU':
@@ -57,7 +56,7 @@ export default function GruposListPage() {
           hoverBorder: 'group-hover:border-violet-500',
           shadow: 'group-hover:shadow-violet-900/10'
         };
-      default: // Licenciatura (Azul Marino)
+      default: 
         return {
           bg: 'bg-blue-50',
           text: 'text-blue-900',
@@ -69,17 +68,13 @@ export default function GruposListPage() {
   };
 
   return (
-    // ✅ ESTRUCTURA DE PANTALLA DIVIDIDA: flex, h-screen, overflow-hidden
     <div className="flex h-screen bg-gray-50 font-sans selection:bg-blue-900/10 overflow-hidden">
       
-      {/* --- MENÚ LATERAL --- */}
       <MenuDocentes />
 
-      {/* --- CONTENIDO PRINCIPAL (Derecha con scroll propio) --- */}
       <div className="flex-1 overflow-y-auto p-6 md:p-12">
         <div className="max-w-7xl mx-auto space-y-10">
           
-          {/* --- ENCABEZADO INSTITUCIONAL AZUL MARINO --- */}
           <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative">
             <div>
               <div className="flex items-center gap-4 mb-2">
@@ -128,7 +123,6 @@ export default function GruposListPage() {
               />
             </div>
 
-            {/* Select de Periodo (Oferta Académica) */}
             <select
               value={filtroPeriodo}
               onChange={(e) => setFiltroPeriodo(e.target.value)}
@@ -137,12 +131,11 @@ export default function GruposListPage() {
               <option value="">Todos los Periodos</option>
               {periodos.map((p) => (
                 <option key={p._id} value={p._id}>
-                  {p.nombre} {p.activo ? '⭐' : ''}
+                  {p.nombre} {p.activo ? 'ACTIVO' : ''}
                 </option>
               ))}
             </select>
 
-            {/* Select de Programa */}
             <select
               value={filtroPrograma}
               onChange={(e) => setFiltroPrograma(e.target.value)}
@@ -155,10 +148,8 @@ export default function GruposListPage() {
             </select>
           </div>
 
-          {/* --- GRID DE GRUPOS --- */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 relative z-10">
             
-            {/* TARJETA FANTASMA (AGREGAR RÁPIDO) */}
             <Link 
               to="/admin/grupos/nuevo"
               className="group relative flex flex-col items-center justify-center min-h-[220px] bg-white/50 rounded-[2rem] border-2 border-dashed border-gray-300 hover:border-blue-900 hover:bg-blue-50/50 transition-all duration-500 overflow-hidden"
@@ -173,7 +164,6 @@ export default function GruposListPage() {
               </span>
             </Link>
 
-            {/* LISTADO DINÁMICO */}
             {gruposFiltrados.map((g) => {
               const theme = getThemeByPrograma(g.programa);
               return (
@@ -181,14 +171,12 @@ export default function GruposListPage() {
                   key={g._id} 
                   className={`group relative bg-white rounded-[2rem] p-7 border border-gray-200 shadow-sm hover:shadow-xl transition-all duration-500 overflow-hidden flex flex-col justify-between min-h-[220px] ${theme.hoverBorder} ${theme.shadow}`}
                 >
-                  {/* Decoración abstracta de fondo */}
                   <div className="absolute -right-8 -top-8 opacity-5 group-hover:opacity-10-transition-opacity duration-500 group-hover:rotate-12 group-hover:scale-110 transform">
                     <svg width="120" height="120" viewBox="0 0 24 24" fill="currentColor" className="text-blue-900">
                       <path d="M12 2L2 22h20L12 2zm0 3.5l7.5 14.5h-15L12 5.5z"/>
                     </svg>
                   </div>
 
-                  {/* Header de la tarjeta */}
                   <div className="relative z-10 flex justify-between items-start mb-4">
                     <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border ${theme.bg} ${theme.text} ${theme.border}`}>
                       {g.programa}
@@ -209,7 +197,6 @@ export default function GruposListPage() {
                     </button>
                   </div>
                   
-                  {/* Cuerpo de la tarjeta */}
                   <div className="relative z-10 mt-auto">
                     <h3 className="text-4xl font-black text-gray-900 tracking-tighter mb-2 group-hover:translate-x-1 transition-transform duration-300">
                       {g.nombre}

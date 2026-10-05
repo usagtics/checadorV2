@@ -62,7 +62,7 @@ export const registrarAsistenciaQR = async (req, res) => {
 
         const checadasHoy = await AsistenciaDocente.find({
             docente: docente._id,
-            fecha: { $gte: inicioDia, $lte: finDia }
+            fecha: { $gte: inicioDia,$lte: finDia }
         }).sort({ fecha: -1 });
 
         if (checadasHoy.length > 0) {
@@ -198,6 +198,9 @@ export const obtenerTodasLasAsistencias = async (req, res) => {
     }
 };
 
+// ==========================================
+// ESTA ES LA ÚNICA FUNCIÓN QUE SE MODIFICÓ
+// ==========================================
 export const getNominaDetalle = async (req, res) => {
     try {
         const { fechaInicio, fechaFin } = req.query;
@@ -223,15 +226,15 @@ export const getNominaDetalle = async (req, res) => {
         const nomina = {};
 
         asistencias.forEach(registro => {
+            // 🛡️ VALIDACIÓN DE SEGURIDAD INYECTADA AQUÍ:
             if (!registro.docente || !registro.materia) return;
+            
             const docenteId = registro.docente._id.toString();
             const materiaId = registro.materia._id.toString();
             const fechaCorta = registro.fecha.toLocaleDateString('en-CA'); 
             
-            // CORRECCIÓN: Extraemos el ID del grupo para evitar que se sobrescriban clases iguales
             const grupoId = registro.grupo ? registro.grupo._id.toString() : 'sin-grupo';
             
-            // CORRECCIÓN: Agregamos el grupo a la llave única
             const llaveUnica = `${docenteId}_${fechaCorta}_${materiaId}_${grupoId}`; 
 
             if (!emparejamiento[llaveUnica]) {
@@ -307,10 +310,8 @@ export const getNominaDetalle = async (req, res) => {
                         finOficial.setHours(hFin, mFin, 0, 0);
 
                         if (par.esJustificado) {
-                            // REGLA MÁGICA: Si está justificado, se pagan los minutos teóricos completos
                             minutosTrabajados = Math.round((finOficial - inicioOficial) / (1000 * 60));
                         } else {
-                            // Cálculo estricto normal
                             const entradaEfectiva = new Date(Math.max(par.entrada.getTime(), inicioOficial.getTime()));
                             const salidaEfectiva = new Date(Math.min(par.salida.getTime(), finOficial.getTime()));
 
@@ -325,10 +326,6 @@ export const getNominaDetalle = async (req, res) => {
                     minutosTrabajados = Math.round((par.salida - par.entrada) / (1000 * 60));
                 }
 
-                // 🌟 REGLA DE REDONDEO INYECTADA 🌟
-                // Redondea a la media hora más cercana (30 min). 
-                // Ej: 1 hr 20 min -> 1 hr 30 min. 1 hr 10 min -> 1 hr 0 min.
-                // Si prefieres cerrarlo a 15 min o 60 min, solo cambia el "30" de aquí abajo.
                 minutosTrabajados = Math.round(minutosTrabajados / 30) * 30;
 
                 let turnoClase = 'Matutino';
@@ -357,14 +354,12 @@ export const getNominaDetalle = async (req, res) => {
             }
 
             par.estatusList.forEach(est => {
-                // Si la clase está justificada, solo mostramos eso y omitimos lo malo
                 if (par.esJustificado && est !== 'Justificado') return; 
                 
                 const desc = `${est} en ${par.materia.nombre || 'Clase'}`;
                 if (!nomina[docenteId].incidencias.includes(desc)) nomina[docenteId].incidencias.push(desc);
             });
 
-            // Si está justificado, tampoco marcamos "Omisión de salida"
             if (par.entrada && !par.salida && !par.esJustificado) {
                 const descOmision = `Omisión de salida en ${par.materia.nombre || 'Clase'}`;
                 if (!nomina[docenteId].incidencias.includes(descOmision)) {
@@ -414,7 +409,7 @@ export const getDesgloseDia = async (req, res) => {
         const { fecha } = req.query; 
         const fechaInicio = new Date(`${fecha}T00:00:00.000Z`);
         const fechaFin = new Date(`${fecha}T23:59:59.999Z`);
-        const asistencias = await AsistenciaDocente.find({ docente: docenteId, fecha: { $gte: fechaInicio, $lte: fechaFin } }).sort({ fecha: 1 });
+        const asistencias = await AsistenciaDocente.find({ docente: docenteId, fecha: { $gte: fechaInicio,$lte: fechaFin } }).sort({ fecha: 1 });
 
         let entradaReal = null;
         let salidaReal = null;

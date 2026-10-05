@@ -187,7 +187,6 @@ export default function AsignacionAcademicaPage() {
         }
     };
 
-    // FUNCIÓN NUEVA: Calcula las horas totales
     const calcularHorasTotales = (ofertas) => {
         if (!ofertas || ofertas.length === 0) return 0;
         let totalMinutos = 0;
@@ -206,7 +205,6 @@ export default function AsignacionAcademicaPage() {
             }
         });
 
-        // Convierte a horas y deja 1 o 0 decimales según corresponda
         return (totalMinutos / 60).toFixed(1).replace('.0', ''); 
     };
 
@@ -239,8 +237,7 @@ export default function AsignacionAcademicaPage() {
                 </header>
 
                 <div className="flex-1 overflow-hidden p-6 flex flex-col lg:flex-row gap-6">
-                    
-                    {/* PANEL IZQUIERDO: FORMULARIO */}
+   
                     <div className="w-full lg:w-[450px] xl:w-[500px] flex flex-col h-full bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden shrink-0">
                         <div className="p-8 overflow-y-auto custom-scrollbar flex-1">
                             
@@ -258,8 +255,7 @@ export default function AsignacionAcademicaPage() {
                             )}
 
                             <form id="asignacion-form" onSubmit={handleSubmit} className="space-y-8">
-                                
-                                {/* SECCIÓN 1: DATOS GENERALES */}
+    
                                 <div className="space-y-5">
                                     <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
                                         <span className="w-5 h-px bg-gray-200"></span> Datos Principales
@@ -305,13 +301,13 @@ export default function AsignacionAcademicaPage() {
                                         <select name="periodo" value={asignacion.periodo} onChange={handleChange} required className="w-full bg-white border-2 border-gray-100 rounded-2xl px-4 py-3.5 text-gray-900 font-bold focus:border-blue-600 focus:ring-4 focus:ring-blue-50 outline-none transition-all appearance-none cursor-pointer">
                                             <option value="">Selecciona el periodo...</option>
                                             {periodos && periodos.map((p) => (
-                                                <option key={p._id} value={p._id}>{p.nombre} {p.activo ? '⭐' : ''}</option>
+                                                <option key={p._id} value={p._id}>{p.nombre} {p.activo ? 'Activo' : ''}</option>
                                             ))}
                                         </select>
                                     </div>
                                 </div>
 
-                                {/* SECCIÓN 2: HORARIOS */}
+
                                 <div className="space-y-5 pt-4">
                                     <div className="flex justify-between items-center">
                                         <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
@@ -345,7 +341,7 @@ export default function AsignacionAcademicaPage() {
                             </form>
                         </div>
                         
-                        {/* FOOTER DEL FORMULARIO (FIJO) */}
+ 
                         <div className="p-6 bg-white border-t border-gray-100 flex flex-col gap-3">
                             <button type="submit" form="asignacion-form" disabled={loading || !asignacion.docente || !asignacion.materia || !asignacion.grupo} className={`w-full ${editandoId ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20' : 'bg-blue-900 hover:bg-blue-950 shadow-blue-900/20'} text-white font-black py-4 rounded-xl transition-all shadow-lg flex justify-center items-center active:scale-[0.98] ${loading || !asignacion.docente || !asignacion.materia || !asignacion.grupo ? 'opacity-50 cursor-not-allowed' : ''}`}>
                                 {loading ? 'PROCESANDO...' : (editandoId ? 'ACTUALIZAR CARGA' : 'ASIGNAR MATERIA')}
@@ -358,9 +354,7 @@ export default function AsignacionAcademicaPage() {
                         </div>
                     </div>
 
-                    {/* PANEL DERECHO: VISOR DEL DOCENTE */}
                     <div className="flex-1 bg-blue-950 rounded-[2rem] shadow-xl border border-blue-900 flex flex-col overflow-hidden relative">
-                        {/* Patrón de fondo */}
                         <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(#60a5fa 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
                         
                         {!docenteSeleccionado ? (
@@ -384,7 +378,6 @@ export default function AsignacionAcademicaPage() {
                                         <span className="bg-blue-900/50 text-blue-400 text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border border-blue-800">
                                             {docenteSeleccionado.ofertaAcademica?.length || 0} Clases
                                         </span>
-                                        {/* 👇 ETIQUETA INYECTADA PARA HORAS TOTALES 👇 */}
                                         <span className="bg-emerald-900/60 text-emerald-400 text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border border-emerald-800/50 flex items-center gap-1.5 shadow-sm shadow-emerald-900/20">
                                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                                             {horasAsignadasSemanales} Horas semanales

@@ -39,10 +39,7 @@ const ReporteChecadas = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
   
-  // Ajusta esto a tu URL real
-  const SERVER_URL = "http://localhost:4000"; 
-
-  // Cerrar dropdown al hacer click fuera
+const SERVER_URL = import.meta.env.VITE_BACKEND_URL || (window.location.hostname === 'localhost' ? "http://localhost:4000" : "https://api.asiste-usag.com.mx");
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (searchContainerRef.current && !searchContainerRef.current.contains(event.target)) {
@@ -53,7 +50,6 @@ const ReporteChecadas = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Carga inicial
   useEffect(() => {
     const cargarDatos = async () => {
         setLoading(true);
@@ -173,15 +169,13 @@ const ReporteChecadas = () => {
         if (dia.esFalta) {
             faltas++;
         } else if (dia.entrada) {
-            // Contar puntualidad basada en la entrada
             if (dia.entrada.status === 'Retardo' || dia.entrada.tarde) {
                 retardos++;
             } else {
                 asistencias++;
             }
 
-            // Verificar si falta la salida
-            // Si hay entrada, no es falta administrativa, y no hay registro de salida:
+          
             if (!dia.salida) {
                 sinSalida++;
             }
@@ -191,7 +185,6 @@ const ReporteChecadas = () => {
     return { asistencias, retardos, faltas, sinSalida };
   }, [registrosPorDia]);
 
-  // Paginación
   const checadasPaginadas = useMemo(() => {
     if (!registrosPorDia) return [];
     const startIndex = (currentPage - 1) * pageSize;
@@ -202,7 +195,6 @@ const ReporteChecadas = () => {
     ? Math.ceil(registrosPorDia.length / pageSize)
     : 1;
 
-  // Manejo de Selección
   const handleSelectEmpleado = (empleado) => {
     setSelectedEmpleadoId(empleado.id);
     setSearchTerm(empleado.name); 
@@ -210,7 +202,6 @@ const ReporteChecadas = () => {
     setCurrentPage(1);
   };
 
-  // --- 4. EXPORTAR A EXCEL (Formato Diario) ---
   const exportarAExcel = () => {
     const datosParaExportar = registrosPorDia.map((dia) => {
       return {
@@ -245,7 +236,6 @@ const ReporteChecadas = () => {
     XLSX.writeFile(wb, `reporte_completo_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
-  // Badge de Estatus visual
   const getStatusBadge = (status) => {
     if (status === "FALTA" || status === "Falta") return <span className="bg-red-100 text-red-700 border border-red-200 px-3 py-1 rounded-full text-xs font-bold shadow-sm">FALTA</span>;
     if (status === "Retardo") return <span className="bg-yellow-100 text-yellow-700 border border-yellow-200 px-3 py-1 rounded-full text-xs font-bold shadow-sm">RETARDO</span>;
@@ -258,7 +248,6 @@ const ReporteChecadas = () => {
       
       <div className="flex-1 ml-64 p-8 pt-24 overflow-y-auto h-screen">
         
-        {/* ENCABEZADO */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-800">Reportes de Asistencia</h1>
@@ -273,7 +262,7 @@ const ReporteChecadas = () => {
           </button>
         </div>
 
-        {/* --- BARRA DE FILTROS --- */}
+      
         <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 mb-6 flex flex-wrap gap-4 items-end">
             <div className="flex-1 min-w-[200px]">
                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Filtrar por Plantel</label>
@@ -305,7 +294,6 @@ const ReporteChecadas = () => {
             </div>
         </div>
 
-        {/* BUSCADOR */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
             <label className="block text-sm font-semibold text-gray-700 mb-2">Buscar Empleado</label>
             <div className="relative" ref={searchContainerRef}>
@@ -337,7 +325,7 @@ const ReporteChecadas = () => {
             </div>
         </div>
 
-        {/* CONTENIDO PRINCIPAL */}
+   
         {loading ? (
             <div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div></div>
         ) : error ? (
@@ -345,7 +333,7 @@ const ReporteChecadas = () => {
         ) : empleadoSeleccionado ? (
           <div className="animate-fade-in-up">
             
-            {/* TARJETAS DE ESTADÍSTICAS */}
+   
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-green-500 flex items-center justify-between">
                     <div><p className="text-gray-500 text-xs font-bold uppercase">Asistencias</p><p className="text-2xl font-bold text-gray-800">{statsEmpleado.asistencias}</p></div>
@@ -365,8 +353,7 @@ const ReporteChecadas = () => {
                 </div>
             </div>
 
-            {/* --- TABLA CON ESTILO "TARJETAS SEPARADAS" --- */}
-            {/* Usamos border-separate y spacing para crear el efecto de división */}
+    
             <div className="overflow-x-auto p-2">
                 <div className="flex justify-between items-center mb-4">
                     <h3 className="font-bold text-gray-700 text-lg">Historial Diario</h3>
@@ -390,7 +377,7 @@ const ReporteChecadas = () => {
                                 key={index} 
                                 className="bg-white shadow-sm hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 rounded-xl group"
                             >
-                                {/* FECHA (Diseño Calendario) */}
+   
                                 <td className="px-6 py-4 rounded-l-xl border-l-4 border-blue-500">
                                     <div className="flex items-center gap-3">
                                         <div className="bg-blue-50 text-blue-600 rounded-lg p-2 text-center min-w-[50px]">
@@ -412,7 +399,7 @@ const ReporteChecadas = () => {
                                     </div>
                                 </td>
                                 
-                                {/* PLANTEL */}
+    
                                 <td className="px-6 py-4 font-medium text-gray-700">
                                     {dia.plantel?.nombre || "N/A"}
                                 </td>
@@ -429,7 +416,7 @@ const ReporteChecadas = () => {
                                     )}
                                 </td>
 
-                                {/* HORA SALIDA (Con alerta roja si falta) */}
+               
                                 <td className="px-6 py-4 text-center">
                                     {dia.salida ? (
                                         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-green-50 text-green-700 font-bold border border-green-100 shadow-sm">
@@ -446,12 +433,11 @@ const ReporteChecadas = () => {
                                     )}
                                 </td>
 
-                                {/* ESTATUS */}
                                 <td className="px-6 py-4 text-center">
                                      {getStatusBadge(dia.esFalta ? 'Falta' : (dia.entrada?.status || (dia.entrada?.tarde ? "Retardo" : "Asistencia")))}
                                 </td>
 
-                                {/* EVIDENCIA (FOTO) */}
+                    
                                 <td className="px-6 py-4 rounded-r-xl text-center">
                                     {dia.entrada?.fotoUrl ? (
                                         <a href={`${SERVER_URL}${dia.entrada.fotoUrl}`} target="_blank" rel="noreferrer" className="inline-block relative group/img">
@@ -472,7 +458,7 @@ const ReporteChecadas = () => {
                 </table>
             </div>
 
-            {/* PAGINACIÓN */}
+
             {totalPages > 1 && (
                 <div className="flex justify-center mt-6 gap-2">
                     <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm hover:bg-gray-50 disabled:opacity-50 font-medium">Anterior</button>

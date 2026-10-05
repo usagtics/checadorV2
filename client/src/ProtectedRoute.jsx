@@ -19,19 +19,14 @@ function ProtectedRoute() {
     );
   }
 
-  // =========================================================
-  // 🛡️ REGLA 1: RUTAS EXCLUSIVAS PARA DOCENTES (/docente/...)
-  // =========================================================
+ 
   if (location.pathname.startsWith('/docente')) {
     if (!isAuthDocente) {
       return <Navigate to="/directivo/login" replace />;
     }
-    return <Outlet />; // ✅ ¡ESTO ES LO QUE FALTABA! ¡DÉJALOS PASAR!
+    return <Outlet />; 
   }
 
-  // =========================================================
-  // 🛡️ REGLA 2: RUTAS DE ADMINISTRACIÓN
-  // =========================================================
   if (!isAuthGeneral && !isAuthDirectivo) {
     
     if (isAuthDocente) {
