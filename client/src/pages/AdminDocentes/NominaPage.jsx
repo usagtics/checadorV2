@@ -31,7 +31,7 @@ const NominaPage = () => {
     return `${y}-${m}-${d}`;
   };
 
-  const obtenerPeriodoActual = () => {
+const obtenerPeriodoActual = () => {
     const hoy = new Date();
     const diasParaJueves = (hoy.getDay() + 3) % 7; 
     
@@ -51,7 +51,6 @@ const NominaPage = () => {
   const [fechaInicio, setFechaInicio] = useState(periodoPorDefecto.inicioStr);
   const [fechaFin, setFechaFin] = useState(periodoPorDefecto.finStr);
 
-  // 👇 EFECTO CORREGIDO: Evita las Condiciones de Carrera 👇
   useEffect(() => {
       let ignorarResultado = false;
 
@@ -62,13 +61,11 @@ const NominaPage = () => {
           try {
               const res = await getNominaRequest(fechaInicio, fechaFin);
               
-              // Si el usuario cambió las fechas, ignoramos estos datos viejos
               if (ignorarResultado) return;
 
               const datos = res.data;
               setDatosNomina(datos);
               
-              // Calcular métricas para el Dashboard
               let calcTotal = 0;
               let calcIncidencias = 0;
               let top = { nombre: '-', total: 0 };
@@ -77,7 +74,6 @@ const NominaPage = () => {
                   calcTotal += d.total;
                   
                   if (d.incidencias && d.incidencias.trim() !== '') {
-                      // Contamos las incidencias separadas por coma
                       calcIncidencias += d.incidencias.split(',').filter(i => i.trim() !== '').length;
                   }
                   
@@ -96,7 +92,6 @@ const NominaPage = () => {
           } catch (error) {
               console.error("Error al cargar previsualización:", error);
           } finally {
-              // Solo quitamos el estado de carga si la petición sigue siendo válida
               if (!ignorarResultado) {
                   setCargandoPreview(false);
               }
@@ -105,7 +100,6 @@ const NominaPage = () => {
 
       cargarPrevisualizacion();
 
-      // Limpieza de React: se ejecuta al cambiar las fechas y mata la petición anterior
       return () => {
           ignorarResultado = true;
       };
@@ -155,7 +149,6 @@ const NominaPage = () => {
       const listaIncidencias = d.incidencias ? d.incidencias : ""; 
       totalGeneral += d.total;
       
-      // Se envían directamente los textos desde el backend (ej: "4 hr 30 min")
       return [
         index + 1,
         d.nombre.toUpperCase(),
@@ -269,7 +262,6 @@ const NominaPage = () => {
             doc.text("Desglose de tiempo pagado:", 25, startY + 58);
             doc.setFont("helvetica", "normal");
             
-            // Se envían directamente los textos desde el backend sin la función de formato
             doc.text(`Matutinas: ${docente.horasMatutinas}`, 30, startY + 63);
             doc.text(`Sabatinas: ${docente.horasSabatinas}`, 30, startY + 68);
             doc.text(`Dominicales: ${docente.horasDominicales}`, 30, startY + 73);
@@ -340,10 +332,8 @@ const NominaPage = () => {
 
         <div className="w-full max-w-7xl mx-auto space-y-6">
           
-          {/* PRIMERA FILA: FECHAS Y DASHBOARD */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               
-              {/* SELECTOR DE FECHAS */}
               <div className="lg:col-span-4 bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col justify-center">
                   <div className="flex items-center gap-4 mb-6">
                       <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center border border-emerald-100 shrink-0">
@@ -379,10 +369,8 @@ const NominaPage = () => {
                   </div>
               </div>
 
-              {/* DASHBOARD DE MÉTRICAS */}
               <div className="lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-6 relative">
                   
-                  {/* Overlay de Carga */}
                   {cargandoPreview && (
                       <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-sm rounded-[2rem] flex flex-col items-center justify-center border border-gray-100">
                           <div className="w-10 h-10 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin mb-3"></div>
@@ -390,7 +378,6 @@ const NominaPage = () => {
                       </div>
                   )}
 
-                  {/* Tarjeta 1: Gran Total */}
                   <div className="bg-gradient-to-br from-emerald-600 to-emerald-800 p-8 rounded-[2rem] shadow-lg shadow-emerald-600/20 text-white flex flex-col justify-between">
                       <div className="flex justify-between items-start mb-4">
                           <h3 className="text-xs font-black uppercase tracking-widest text-emerald-100">Gran Total Quincena</h3>
@@ -404,7 +391,6 @@ const NominaPage = () => {
                       </div>
                   </div>
 
-                  {/* Tarjeta 2: Maestros Pagados */}
                   <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col justify-between">
                       <div className="flex justify-between items-start mb-4">
                           <h3 className="text-xs font-black uppercase tracking-widest text-gray-400">Docentes a Pagar</h3>
@@ -418,7 +404,6 @@ const NominaPage = () => {
                       </div>
                   </div>
 
-                  {/* Tarjeta 3: Incidencias */}
                   <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col justify-between">
                       <div className="flex justify-between items-start mb-4">
                           <h3 className="text-xs font-black uppercase tracking-widest text-gray-400">Alertas / Retardos</h3>
@@ -432,7 +417,6 @@ const NominaPage = () => {
                       </div>
                   </div>
 
-                  {/* Tarjeta 4: Mayor Pago */}
                   <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100 flex flex-col justify-between">
                       <div className="flex justify-between items-start mb-4">
                           <h3 className="text-xs font-black uppercase tracking-widest text-gray-400">Mayor Percepción</h3>
@@ -449,12 +433,10 @@ const NominaPage = () => {
               </div>
           </div>
 
-          {/* SEGUNDA FILA: DESCARGAS */}
           <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100">
               <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-6">Generación de Reportes Oficiales</h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Opción 1: Reporte General */}
                   <div className="bg-gray-50 rounded-[2rem] p-6 border border-gray-100 hover:border-emerald-300 hover:shadow-md transition-all group flex flex-col sm:flex-row items-center justify-between gap-6">
                       <div className="flex items-center gap-5">
                           <div className="w-14 h-14 bg-white text-emerald-600 rounded-2xl flex items-center justify-center shrink-0 group-hover:bg-emerald-600 group-hover:text-white transition-colors border border-gray-200 shadow-sm">
@@ -476,7 +458,6 @@ const NominaPage = () => {
                       </button>
                   </div>
 
-                  {/* Opción 2: Recibos ZIP */}
                   <div className="bg-gray-50 rounded-[2rem] p-6 border border-gray-100 hover:border-blue-300 hover:shadow-md transition-all group flex flex-col sm:flex-row items-center justify-between gap-6">
                       <div className="flex items-center gap-5">
                           <div className="w-14 h-14 bg-white text-blue-600 rounded-2xl flex items-center justify-center shrink-0 group-hover:bg-blue-600 group-hover:text-white transition-colors border border-gray-200 shadow-sm">

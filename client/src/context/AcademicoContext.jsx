@@ -2,11 +2,14 @@ import React, { createContext, useContext, useState } from "react";
 import {
   getMateriasRequest,
   createMateriaRequest, 
+  getMateriaRequest,     
+  updateMateriaRequest,  
+  deleteMateriaRequest,  
   getGruposRequest,
   getOfertasRequest,
   createOfertaAcademicaRequest,
-  updateOfertaAcademicaRequest, // ✅ NUEVO IMPORT
-  deleteOfertaAcademicaRequest  // ✅ NUEVO IMPORT
+  updateOfertaAcademicaRequest, 
+  deleteOfertaAcademicaRequest  
 } from "../api/academico";
 
 export const AcademicoContext = createContext();
@@ -25,10 +28,9 @@ export function AcademicoProvider({ children }) {
   const [ofertas, setOfertas] = useState([]);
   const [errors, setErrors] = useState([]);
 
-  // --- MATERIAS ---
-  const getMaterias = async () => {
+  const getMaterias = async (periodo = "") => {
     try {
-      const res = await getMateriasRequest();
+      const res = await getMateriasRequest(periodo);
       setMaterias(res.data);
     } catch (error) {
       console.error(error);
@@ -46,7 +48,36 @@ export function AcademicoProvider({ children }) {
     }
   };
 
-  // --- GRUPOS ---
+  const getMateria = async (id) => {
+    try {
+      const res = await getMateriaRequest(id);
+      return res.data;
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const updateMateria = async (id, materia) => {
+    try {
+      await updateMateriaRequest(id, materia);
+    } catch (error) {
+      console.error(error);
+      setErrors(error.response?.data?.message || ["Error al actualizar la materia"]);
+    }
+  };
+
+  const deleteMateria = async (id) => {
+    try {
+      const res = await deleteMateriaRequest(id);
+      if (res.status === 200 || res.status === 204) {
+        setMaterias(materias.filter((m) => m._id !== id));
+      }
+    } catch (error) {
+      console.error(error);
+      setErrors(error.response?.data?.message || ["Error al eliminar la materia"]);
+    }
+  };
+
   const getGrupos = async () => {
     try {
       const res = await getGruposRequest();
@@ -56,7 +87,6 @@ export function AcademicoProvider({ children }) {
     }
   };
 
-  // --- OFERTAS ACADÉMICAS (ASIGNACIONES) ---
   const getOfertas = async (programa) => {
     try {
       const res = await getOfertasRequest(programa);
@@ -66,22 +96,13 @@ export function AcademicoProvider({ children }) {
     }
   };
 
-const createOfertaAcademica = async (asignacionData) => {
+  const createOfertaAcademica = async (asignacionData) => {
     try {
-      // 1. Limpieza preventiva antes de enviar al backend
       const dataLimpia = { ...asignacionData };
-      
-      // Si el periodo es cadena vacía, lo eliminamos para que el backend 
-      // detecte que es 'undefined' y aplique la lógica del periodo activo
       if (!dataLimpia.periodo || dataLimpia.periodo === "") {
         delete dataLimpia.periodo;
       }
-
       const res = await createOfertaAcademicaRequest(dataLimpia);
-      
-      // 2. Opcional: Actualizar el estado local si es necesario
-      // setOfertas([...ofertas, res.data]); 
-      
       return res.data; 
     } catch (error) {
       setErrors(error.response?.data?.message || ["Error al crear asignación"]);
@@ -100,7 +121,6 @@ const createOfertaAcademica = async (asignacionData) => {
     }
   };
 
-  // ✅ NUEVO: Función para eliminar
   const deleteOfertaAcademica = async (id) => {
     try {
       const res = await deleteOfertaAcademicaRequest(id);
@@ -118,14 +138,17 @@ const createOfertaAcademica = async (asignacionData) => {
         materias,
         grupos,
         ofertas,
+        errors,
         getOfertas,
         getMaterias,
         createMateria, 
+        getMateria,        
+        updateMateria,    
+        deleteMateria,  
         getGrupos,
         createOfertaAcademica,
         updateOfertaAcademica, 
         deleteOfertaAcademica, 
-        errors,
       }}
     >
       {children}

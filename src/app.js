@@ -28,7 +28,6 @@ import teamsRoutes from './routes/teams.routes.js';
 import { obtenerToken } from './services/teamsService.js';
 import carreraRoutes from './routes/carrera.routes.js';
 
-// 👉 AQUÍ ESTÁ LA NUEVA IMPORTACIÓN
 import hikvisionRoutes from './routes/hikvision.routes.js'; 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -57,6 +56,8 @@ app.use(cors({
     "https://asiste-usag.com.mx",
     "https://www.asiste-usag.com.mx"
   ],
+
+  
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -79,6 +80,7 @@ app.use("/api", checadaRoutes);
 
 app.use('/api', docentesRoutes);
 app.use('/api', materiasRoutes);
+
 app.use('/api', gruposRoutes);
 app.use('/api', ofertaAcademicaRoutes);
 app.use('/api', checadorDocenteRoutes);

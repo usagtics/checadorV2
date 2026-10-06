@@ -1,28 +1,22 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-
-// CONTEXTOS
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { PeriodoProvider } from './context/PeriodoContext';
 import { TaskProvider } from './context/TasksContext';
 import { EmployeeProvider } from './context/EmpleadoContext';
 import { TipoHorarioProvider } from './context/tipohorarioContext'; 
 import { PlantelesProvider } from "./context/plantelesContext";
-import { ChecadasProvider } from './context/checadasContext'; // 🚀 IMPORTADO EL PROVIDER FALTANTE
+import { ChecadasProvider } from './context/checadasContext'; 
 import { ChecadasDocenteProvider } from './context/checadasDocenteContext'; 
 import { ReporteChecadasProvider } from './context/ReporteChecadasContext'; 
 import { DocenteProvider, useDocentes } from './context/DocenteContext';
 import { AcademicoProvider } from './context/AcademicoContext';
 import { GrupoProvider } from './context/GrupoContext'; 
 import { DirectivoProvider, useDirectivo } from './context/DirectivoContext';
-import { CarreraProvider } from './context/CarreraContext'; // 🚀 IMPORTADO
-
-// COMPONENTES
+import { CarreraProvider } from './context/CarreraContext'; 
 import Navbar from './components/Navbar';
 import NavbarAdmin from './components/NavbarAdmin';
 import NavbarDocente from './components/NavbarDocente';
 import ProtectedRoute from './ProtectedRoute'; 
-
-// PÁGINAS
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -59,12 +53,12 @@ function App() {
     <AuthProvider>
       <PeriodoProvider> 
         <DirectivoProvider>
-          <CarreraProvider> {/* 🚀 ENVOLVIENDO LA APP */}
+          <CarreraProvider> 
             <TaskProvider>
               <EmployeeProvider>
                 <TipoHorarioProvider>
                   <PlantelesProvider>
-                    <ChecadasProvider> {/* 🚀 AQUÍ ESTÁ EL FIX: ENVOLVIENDO CON CHECADAS PARA COLABORADORES */}
+                    <ChecadasProvider> 
                       <ChecadasDocenteProvider>
                         <ReporteChecadasProvider>  
                           <DocenteProvider>
@@ -73,13 +67,11 @@ function App() {
                                 <BrowserRouter>
                                   <AuthContent />
                                   <Routes>
-                                    {/* --- RUTAS PÚBLICAS --- */}
                                     <Route path="/" element={<HomePage />} />
                                     <Route path="/login" element={<LoginPage />} />
                                     <Route path="/directivo/login" element={<DirectivoLoginPage />} />
                                     <Route path="/checador" element={<ChecadorPage />} />
 
-                                    {/* --- RUTAS PROTEGIDAS --- */}
                                     <Route element={<ProtectedRoute />}>
                                       <Route path="/docente/inicio" element={<DocenteDashboardPage />} />
                                       <Route path="/dashboard" element={<DashboardPage />} />
@@ -97,13 +89,14 @@ function App() {
                                       <Route path="/reporte-checadas" element={<ReporteChecadasPage />} />
                                       <Route path="/admin/directivos" element={<DirectivosPage />} />
                                       <Route path="/admin/directivos/nuevo" element={<DirectivoFormPage />} />
-                                      <Route path="/admin/carreras" element={<CarrerasPage />} /> {/* 🚀 NUEVA RUTA */}
+                                      <Route path="/admin/carreras" element={<CarrerasPage />} /> 
                                       <Route path="/admin" element={<DashboardDirectivoPage />} />
                                       <Route path="/admin/registro-docente" element={<DocenteFormPage />} />
                                       <Route path="/admin/registro-docente/:id" element={<DocenteFormPage />} />
                                       <Route path="/admin/docentes" element={<DocentesListPage />} />
                                       <Route path="/admin/asignacion" element={<AsignacionAcademicaPage />} />
                                       <Route path="/admin/materias" element={<MateriasListPage />} />
+                                      <Route path="/admin/materias/editar/:id" element={<MateriaFormPage />} />
                                       <Route path="/admin/materias/nueva" element={<MateriaFormPage />} />
                                       <Route path="/admin/grupos" element={<GruposListPage />} />
                                       <Route path="/admin/grupos/nuevo" element={<GrupoFormPage />} />
@@ -120,12 +113,12 @@ function App() {
                           </DocenteProvider>
                         </ReporteChecadasProvider>
                       </ChecadasDocenteProvider>
-                    </ChecadasProvider> {/* 🚀 CIERRE DEL PROVIDER DE CHECADAS */}
+                    </ChecadasProvider>
                   </PlantelesProvider>
                 </TipoHorarioProvider>
               </EmployeeProvider>
             </TaskProvider>
-          </CarreraProvider> {/* 🚀 FIN DEL PROVIDER */}
+          </CarreraProvider> 
         </DirectivoProvider>
       </PeriodoProvider>
     </AuthProvider>

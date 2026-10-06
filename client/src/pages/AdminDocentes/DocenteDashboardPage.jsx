@@ -6,11 +6,9 @@ import CryptoJS from 'crypto-js';
 export default function DocenteDashboard() {
   const { docente } = useDocentes();
 
-  // Estados para nuestro QR Dinámico
   const [qrToken, setQrToken] = useState('');
   const [countdown, setCountdown] = useState(20); 
 
-  // --- LÓGICA DE SEGURIDAD: GENERADOR DE QR DINÁMICO ---
   useEffect(() => {
     if (!docente?.numeroEmpleado) return;
 
@@ -42,7 +40,6 @@ export default function DocenteDashboard() {
     };
   }, [docente]);
 
-  // --- AGRUPAR HORARIO DEL DOCENTE ---
   const horarioAgrupado = useMemo(() => {
     if (!docente || !docente.ofertaAcademica) return [];
 
@@ -78,7 +75,6 @@ export default function DocenteDashboard() {
       }));
   }, [docente]);
 
-  // --- LÓGICA DE PROGRESO DEL DÍA ACTUAL ---
   const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
   const diaHoy = diasSemana[new Date().getDay()];
 
@@ -157,7 +153,6 @@ export default function DocenteDashboard() {
             </div>
           </div>
 
-          {/* COLUMNA DERECHA: HORARIO SEMANAL */}
           <div className="lg:col-span-2 space-y-8">
             <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100 h-full">
               <h3 className="text-xl font-black text-gray-900 mb-8 flex items-center gap-2">
@@ -185,7 +180,6 @@ export default function DocenteDashboard() {
                           {diaInfo.clases.map((clase, cIdx) => {
                             let statusClase = null;
                             
-                            // Si es el día de hoy, verificamos si ya asistió
                             if (esHoy) {
                               const registrosMateria = asistenciasHoy.filter(a => a.materia?.nombre === clase.materia || a.materia === clase.materia);
                               const tieneEntrada = registrosMateria.some(a => a.tipoRegistro === 'Entrada');
@@ -194,15 +188,13 @@ export default function DocenteDashboard() {
                               if (tieneEntrada && tieneSalida) {
                                 statusClase = 'completada';
                               } else if (tieneEntrada) {
-                                // 🚨 NUEVA VALIDACIÓN DE OMISIÓN DE SALIDA
                                 const [hFin, mFin] = clase.horaFin.split(':').map(Number);
                                 const horaFinClase = new Date();
-                                horaFinClase.setHours(hFin, mFin + 30, 0, 0); // La tolerancia de 30 minutos
-
+                                horaFinClase.setHours(hFin, mFin + 30, 0, 0); 
                                 if (new Date() > horaFinClase) {
-                                  statusClase = 'omision_salida'; // Se pasó el tiempo, se le olvidó
+                                  statusClase = 'omision_salida'; 
                                 } else {
-                                  statusClase = 'curso'; // Todavía está a tiempo de salir
+                                  statusClase = 'curso'; 
                                 }
                               } else {
                                 statusClase = 'pendiente';
@@ -219,7 +211,6 @@ export default function DocenteDashboard() {
                                   <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                                     <p className="font-bold text-gray-900 leading-tight">{clase.materia}</p>
                                     
-                                    {/* BADGES DE ESTATUS */}
                                     {statusClase === 'completada' && (
                                       <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-widest flex items-center gap-1 w-fit border border-emerald-200">
                                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg> Cubierta
@@ -277,7 +268,6 @@ export default function DocenteDashboard() {
           </div>
         </div>
 
-        {/* --- TABLA DE CHECADAS --- */}
         <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-gray-100">
           <h3 className="text-xl font-black text-gray-900 mb-6">Registro Detallado</h3>
           <div className="overflow-x-auto">

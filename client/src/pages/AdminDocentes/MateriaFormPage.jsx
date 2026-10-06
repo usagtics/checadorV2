@@ -1,20 +1,40 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAcademico } from '../../context/AcademicoContext';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useParams } from 'react-router-dom';
 import MenuDocentes from '../../menu/MenuDocentes';
 
 export default function MateriaFormPage() {
-  const { createMateria, errors: backendErrors } = useAcademico();
+  const { createMateria, getMateria, updateMateria, errors: backendErrors } = useAcademico();
   const navigate = useNavigate();
+  const params = useParams(); 
   
   const [materia, setMateria] = useState({ nombre: '', clave: '' });
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const cargarMateria = async () => {
+      if (params.id) {
+        const materiaCargada = await getMateria(params.id);
+        if (materiaCargada) {
+          setMateria({
+            nombre: materiaCargada.nombre,
+            clave: materiaCargada.clave
+          });
+        }
+      }
+    };
+    cargarMateria();
+  }, [params.id]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
-      await createMateria(materia);
+      if (params.id) {
+        await updateMateria(params.id, materia);
+      } else {
+        await createMateria(materia);
+      }
       navigate('/admin/materias');
     } catch (error) {
       console.error("Error al guardar materia:", error);
@@ -46,11 +66,13 @@ export default function MateriaFormPage() {
                             <div className="flex items-center gap-3 mb-1">
                                 <div className="h-8 w-1.5 bg-blue-900 rounded-full"></div>
                                 <h1 className="text-3xl font-black text-gray-900 tracking-tighter">
-                                    Nueva <span className="text-blue-900">Materia</span>
+                                    {params.id ? 'Editar' : 'Nueva'} <span className="text-blue-900">Materia</span>
                                 </h1>
                             </div>
                             <p className="text-gray-500 font-medium text-sm ml-4">
-                                Añade una nueva asignatura al catálogo académico.
+                                {params.id 
+                                    ? 'Modifica los datos de la asignatura en el catálogo.' 
+                                    : 'Añade una nueva asignatura al catálogo académico.'}
                             </p>
                         </div>
                     </div>
@@ -112,7 +134,7 @@ export default function MateriaFormPage() {
                                         <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                                         GUARDANDO...
                                     </div>
-                                ) : 'GUARDAR EN CATÁLOGO'}
+                                ) : (params.id ? 'GUARDAR CAMBIOS' : 'GUARDAR EN CATÁLOGO')}
                             </button>
                         </div>
                     </form>

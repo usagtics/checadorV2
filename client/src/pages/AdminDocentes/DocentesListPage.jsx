@@ -115,7 +115,6 @@ export default function DocentesListPage() {
                 <h1 className="text-4xl font-black text-gray-900 tracking-tighter">Plantilla de Docentes</h1>
               </div>
               
-              {/* 👇 NUEVO DISEÑO PARA LAS CARRERAS 👇 */}
               <div className="flex flex-wrap items-center gap-2 ml-4">
                 <span className="text-gray-500 font-medium text-sm mr-1">Gestión de:</span>
                 {user?.carreras && user.carreras.length > 0 ? (
@@ -135,12 +134,25 @@ export default function DocentesListPage() {
               </div>
             </div>
             
-            <Link 
+            {/* 👇 AQUÍ EMPIEZA EL BOTÓN NUEVO Y DINÁMICO 👇 */}
+          <Link 
               to="/admin/registro-docente" 
-              className="group bg-blue-900 hover:bg-blue-950 text-white px-8 py-4 rounded-2xl font-black transition-all shadow-lg shadow-blue-900/20 flex items-center gap-2 transform active:scale-95 mt-4 md:mt-0"
+              className="group relative overflow-hidden bg-blue-900 hover:bg-blue-950 text-white px-8 py-4 rounded-2xl font-black transition-all duration-300 shadow-[0_8px_30px_rgb(30,58,138,0.3)] hover:shadow-[0_8px_30px_rgb(30,58,138,0.5)] hover:-translate-y-1 flex items-center gap-3 mt-4 md:mt-0"
             >
-              NUEVO DOCENTE
+              {/* Efecto de luz al pasar el mouse */}
+              <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent group-hover:animate-[shimmer_1.5s_infinite] pointer-events-none"></div>
+              
+              {/* Ícono dinámico */}
+              <div className="bg-white/10 p-2 rounded-xl backdrop-blur-sm group-hover:scale-110 transition-transform duration-300">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                </svg>
+              </div>
+              
+              <span className="tracking-wide">NUEVO DOCENTE</span>
             </Link>
+            {/* 👆 AQUÍ TERMINA EL BOTÓN 👆 */}
+
           </div>
 
           <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 mb-8 flex flex-col md:flex-row gap-4">
@@ -168,7 +180,7 @@ export default function DocentesListPage() {
                     <option value="">Todos los periodos</option>
                     {periodos && periodos.map((p) => (
                         <option key={p._id} value={p._id}>
-                            {p.nombre} {p.activo ? '⭐' : ''}
+                            {p.nombre} {p.activo ? 'Activo' : ''}
                         </option>
                     ))}
                 </select>

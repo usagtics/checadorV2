@@ -1,12 +1,10 @@
 import Materia from '../models/materias.model.js';
-// Importamos Grupo y OfertaAcademica para poder triangular y filtrar los datos
 import Grupo from '../models/grupos.model.js';
 import OfertaAcademica from '../models/ofertaAcademica.model.js';
 
 export const crearMateria = async (req, res) => {
     try {
         const { nombre, clave } = req.body;
-
         const carrerasAsignadas = req.user && req.user.carreras ? req.user.carreras : [];
 
         const nuevaMateria = new Materia({ 
@@ -26,12 +24,23 @@ export const obtenerMaterias = async (req, res) => {
     try {
         const carrerasDelDirectivo = req.user && req.user.carreras ? req.user.carreras : [];
 
-   
         const filtro = (carrerasDelDirectivo.length > 0 && req.user.role !== 'super-admin')
             ? { carreras: { $in: carrerasDelDirectivo } }
             : {};
 
-        const materias = await Materia.find(filtro);
+        
+        const materias = await Materia.find(filtro).lean();
+        
+        if (req.query.periodo) {
+            const ofertasEnPeriodo = await OfertaAcademica.find({ periodo: req.query.periodo }).select('materia');
+            
+            const materiasActivasIds = ofertasEnPeriodo.map(oferta => oferta.materia.toString());
+
+            materias.forEach(materia => {
+                materia.activaEnPeriodo = materiasActivasIds.includes(materia._id.toString());
+            });
+        }
+
         res.json(materias);
         
     } catch (error) {
@@ -58,7 +67,6 @@ export const actualizarMateria = async (req, res) => {
         res.status(500).json({ message: 'Error al actualizar la materia', error: error.message });
     }
 };
-
 
 export const eliminarMateria = async (req, res) => {
     try {
