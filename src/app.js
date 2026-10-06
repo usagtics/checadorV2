@@ -8,10 +8,8 @@ import { fileURLToPath } from "url";
 import { dirname } from "path";
 import cors from "cors";
 import multer from "multer";         
-
 import authRoutes from "./routes/auth.routes.js"; 
 import directivoAuthRoutes from "./routes/directivoAuth.routes.js"; 
-
 import taskRoutes from './routes/tasks.routes.js';
 import employeesRoutes from './routes/empleados.routes.js';
 import tipohorariosRoutes from './routes/tipohorarios.routes.js';
@@ -23,11 +21,10 @@ import gruposRoutes from './routes/grupos.routes.js';
 import ofertaAcademicaRoutes from './routes/ofertaAcademica.routes.js';
 import checadorDocenteRoutes from './routes/checadorDocente.routes.js';
 import periodosRoutes from './routes/periodos.routes.js'; 
-
+import justificacionesRoutes from './routes/justificaciones.routes.js'; 
 import teamsRoutes from './routes/teams.routes.js';
 import { obtenerToken } from './services/teamsService.js';
 import carreraRoutes from './routes/carrera.routes.js';
-
 import hikvisionRoutes from './routes/hikvision.routes.js'; 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -85,6 +82,7 @@ app.use('/api', gruposRoutes);
 app.use('/api', ofertaAcademicaRoutes);
 app.use('/api', checadorDocenteRoutes);
 app.use('/api', periodosRoutes); 
+app.use('/api/justificaciones', justificacionesRoutes); 
 app.use("/api", carreraRoutes);
 app.use('/api', teamsRoutes);
 
