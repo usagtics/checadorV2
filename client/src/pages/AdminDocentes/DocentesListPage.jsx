@@ -6,14 +6,13 @@ import { Link } from 'react-router-dom';
 import MenuDocentes from '../../menu/MenuDocentes'; 
 
 export default function DocentesListPage() {
-  const { getDocentes, docentes, loading } = useDocentes();
+  const { getDocentes, docentes, deleteDocente, loading } = useDocentes();
   const { user } = useDirectivo();
   const { periodos, getPeriodos } = usePeriodos(); 
-  
   const [showQRModal, setShowQRModal] = useState(false);
   const [showHorarioModal, setShowHorarioModal] = useState(false);
   const [selectedDocente, setSelectedDocente] = useState(null);
-
+  const [docenteABajar, setDocenteABajar] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPeriodo, setSelectedPeriodo] = useState("");
 
@@ -40,14 +39,20 @@ export default function DocentesListPage() {
     link.click();
   };
 
+  const confirmarBaja = async () => {
+    if (docenteABajar) {
+      await deleteDocente(docenteABajar._id);
+      setDocenteABajar(null);
+      getDocentes(); 
+    }
+  };
+
   const docentesFiltrados = docentes.filter(docente => {
-    // 1. Filtro por buscador (Nombre, apellidos o matrícula)
     const matchesSearch = 
       docente.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
       docente.apellidos.toLowerCase().includes(searchTerm.toLowerCase()) ||
       docente.numeroEmpleado.toLowerCase().includes(searchTerm.toLowerCase());
 
-    // 2. Filtro por periodo activo
     let matchesPeriodo = true;
     if (selectedPeriodo !== "") {
         matchesPeriodo = docente.ofertaAcademica?.some(
@@ -101,7 +106,7 @@ export default function DocentesListPage() {
   );
 
   return (
-    <div className="flex h-screen bg-gray-50 font-sans selection:bg-blue-900/10 overflow-hidden">
+    <div className="flex h-screen bg-gray-50 font-sans selection:bg-blue-900/10 overflow-hidden relative">
       
       <MenuDocentes />
 
@@ -134,15 +139,12 @@ export default function DocentesListPage() {
               </div>
             </div>
             
-            {/* 👇 AQUÍ EMPIEZA EL BOTÓN NUEVO Y DINÁMICO 👇 */}
           <Link 
               to="/admin/registro-docente" 
               className="group relative overflow-hidden bg-blue-900 hover:bg-blue-950 text-white px-8 py-4 rounded-2xl font-black transition-all duration-300 shadow-[0_8px_30px_rgb(30,58,138,0.3)] hover:shadow-[0_8px_30px_rgb(30,58,138,0.5)] hover:-translate-y-1 flex items-center gap-3 mt-4 md:mt-0"
             >
-              {/* Efecto de luz al pasar el mouse */}
               <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/10 to-transparent group-hover:animate-[shimmer_1.5s_infinite] pointer-events-none"></div>
               
-              {/* Ícono dinámico */}
               <div className="bg-white/10 p-2 rounded-xl backdrop-blur-sm group-hover:scale-110 transition-transform duration-300">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
@@ -151,7 +153,6 @@ export default function DocentesListPage() {
               
               <span className="tracking-wide">NUEVO DOCENTE</span>
             </Link>
-            {/* 👆 AQUÍ TERMINA EL BOTÓN 👆 */}
 
           </div>
 
@@ -201,15 +202,29 @@ export default function DocentesListPage() {
                 <tbody className="divide-y divide-gray-100">
                   {docentesFiltrados.length > 0 ? (
                       docentesFiltrados.map((docente) => (
-                        <tr key={docente._id} className="hover:bg-blue-50/30 transition-colors group">
+                        <tr key={docente._id} className={`hover:bg-blue-50/30 transition-colors group ${docente.activo === false ? 'opacity-60 bg-gray-50' : ''}`}>
                           <td className="px-8 py-6">
                             <div className="flex items-center gap-4">
-                              <div className="w-11 h-11 rounded-2xl bg-blue-100 text-blue-900 flex items-center justify-center font-black border border-blue-200">
+                              <div className={`w-11 h-11 rounded-2xl flex items-center justify-center font-black border ${docente.activo === false ? 'bg-gray-200 text-gray-500 border-gray-300' : 'bg-blue-100 text-blue-900 border-blue-200'}`}>
                                 {docente.nombre ? docente.nombre.charAt(0).toUpperCase() : 'U'}
                               </div>
                               <div>
                                 <span className="font-bold text-gray-900 block leading-tight">{docente.nombre} {docente.apellidos}</span>
                                 <span className="text-[10px] text-gray-400 font-bold tracking-widest uppercase">Matrícula: {docente.numeroEmpleado}</span>
+                                
+                                <div className="mt-1">
+                                  {docente.activo !== false ? (
+                                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[9px] font-bold bg-green-50 text-green-700 border border-green-200 uppercase tracking-wider">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                                      Activo
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[9px] font-bold bg-red-50 text-red-700 border border-red-200 uppercase tracking-wider">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                                      Baja
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </td>
@@ -275,6 +290,19 @@ export default function DocentesListPage() {
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                 </svg>
                               </Link>
+
+                              {docente.activo !== false && (
+                                <button 
+                                  onClick={() => setDocenteABajar(docente)}
+                                  className="p-2 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white rounded-xl transition-all border border-red-100 shadow-sm"
+                                  title="Dar de Baja"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6v1h12v-1a6 6 0 00-6-6zM21 12h-6" />
+                                  </svg>
+                                </button>
+                              )}
+
                             </div>
                           </td>
                         </tr>
@@ -391,6 +419,42 @@ export default function DocentesListPage() {
               </button>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {docenteABajar && (
+        <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-[100] p-4 transition-all">
+          <div className="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl animate-in fade-in zoom-in duration-200">
+            
+            <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+
+            <h3 className="text-2xl font-black text-gray-900 text-center mb-2">
+              ¿Dar de baja?
+            </h3>
+            
+            <p className="text-gray-500 text-center font-medium mb-8">
+              <span className="font-bold text-gray-800">{docenteABajar.nombre} {docenteABajar.apellidos}</span> perderá el acceso al sistema. Su historial se conservará.
+            </p>
+
+            <div className="flex flex-col-reverse md:flex-row gap-3 justify-center">
+              <button 
+                onClick={() => setDocenteABajar(null)} 
+                className="px-6 py-3.5 rounded-2xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors w-full md:w-auto"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={confirmarBaja} 
+                className="px-6 py-3.5 rounded-2xl font-bold text-white bg-red-600 hover:bg-red-700 shadow-lg shadow-red-600/30 transition-all w-full md:w-auto"
+              >
+                Sí, dar de baja
+              </button>
+            </div>
           </div>
         </div>
       )}

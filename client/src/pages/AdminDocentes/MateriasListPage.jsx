@@ -9,6 +9,8 @@ export default function MateriasListPage() {
   const { periodos, getPeriodos } = usePeriodos();
   const [busqueda, setBusqueda] = useState('');
   const [periodoSeleccionado, setPeriodoSeleccionado] = useState('');
+  
+  const [materiaAEliminar, setMateriaAEliminar] = useState(null);
 
   useEffect(() => {
     getMaterias(periodoSeleccionado);
@@ -20,8 +22,15 @@ export default function MateriasListPage() {
     m.clave.toLowerCase().includes(busqueda.toLowerCase())
   );
 
+  const confirmarEliminacion = async () => {
+    if (materiaAEliminar) {
+      await deleteMateria(materiaAEliminar._id);
+      setMateriaAEliminar(null);
+    }
+  };
+
   return (
-    <div className="flex h-screen bg-gray-50 font-sans overflow-hidden">
+    <div className="flex h-screen bg-gray-50 font-sans overflow-hidden relative">
       <MenuDocentes />
 
       <div className="flex-1 overflow-y-auto p-6 md:p-12">
@@ -47,18 +56,18 @@ export default function MateriasListPage() {
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
             />
-          <select 
-  className="w-full p-4 rounded-2xl border border-gray-200 font-bold text-gray-700 bg-white outline-none focus:ring-4 focus:ring-blue-100 transition-shadow cursor-pointer"
-  value={periodoSeleccionado}
-  onChange={(e) => setPeriodoSeleccionado(e.target.value)}
->
-  <option value="">Todos los Periodos...</option>
-  {periodos.map(p => (
-    <option key={p._id} value={p._id}>
-      {p.nombre} {(p.activo || p.estado) ? 'Activo' : ''}
-    </option>
-  ))}
-</select>
+            <select 
+              className="w-full p-4 rounded-2xl border border-gray-200 font-bold text-gray-700 bg-white outline-none focus:ring-4 focus:ring-blue-100 transition-shadow cursor-pointer"
+              value={periodoSeleccionado}
+              onChange={(e) => setPeriodoSeleccionado(e.target.value)}
+            >
+              <option value="">Todos los Periodos...</option>
+              {periodos.map(p => (
+                <option key={p._id} value={p._id}>
+                  {p.nombre} {(p.activo || p.estado) ? 'Activo' : ''}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="bg-white rounded-[2rem] shadow-xl border border-gray-100 flex flex-col h-[600px]">
@@ -83,20 +92,20 @@ export default function MateriasListPage() {
                         </td>
                         <td className="px-8 py-5 font-bold text-gray-800">{materia.nombre}</td>
                         
-                       <td className="px-8 py-5 text-center">
+                        <td className="px-8 py-5 text-center">
                           {!periodoSeleccionado ? (
-                           <span className="text-gray-400 text-sm italic">—</span>
-                           ) : materia.activaEnPeriodo ? (
-                           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700 border border-green-200">
-                           <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                           En Periodo
-                           </span>
-                        ) : (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-500 border border-gray-200">
-                      No programada
-                        </span>
-                           )}
-                       </td>
+                            <span className="text-gray-400 text-sm italic">—</span>
+                          ) : materia.activaEnPeriodo ? (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700 border border-green-200">
+                              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                              En Periodo
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-500 border border-gray-200">
+                              No programada
+                            </span>
+                          )}
+                        </td>
                         
                         <td className="px-8 py-5 text-right">
                           <div className="flex items-center justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
@@ -111,11 +120,8 @@ export default function MateriasListPage() {
                             </Link>
 
                             <button 
-                              onClick={() => {
-                                if(window.confirm(`¿Seguro que deseas eliminar la materia ${materia.clave}?`)) {
-                                  deleteMateria(materia._id);
-                                }
-                              }}
+                              // 👇 3. AHORA EL BOTÓN SOLO ABRE EL MODAL
+                              onClick={() => setMateriaAEliminar(materia)}
                               className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"
                               title="Eliminar Materia"
                             >
@@ -142,9 +148,46 @@ export default function MateriasListPage() {
               <span>Total de materias: {materiasFiltradas.length}</span>
             </div>
           </div>
-
         </div>
       </div>
+
+      {materiaAEliminar && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm p-4 transition-all">
+          <div className="bg-white p-8 rounded-[2rem] shadow-2xl max-w-md w-full animate-in fade-in zoom-in duration-200">
+            
+            {/* Icono de advertencia */}
+            <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+
+            <h3 className="text-2xl font-black text-gray-900 text-center mb-2">
+              ¿Eliminar materia?
+            </h3>
+            
+            <p className="text-gray-500 text-center font-medium mb-8">
+              Estás a punto de eliminar <span className="font-bold text-gray-800">{materiaAEliminar.clave}</span>. Esta acción no se puede deshacer y se borrará del catálogo.
+            </p>
+
+            <div className="flex flex-col-reverse md:flex-row gap-3 justify-center">
+              <button 
+                onClick={() => setMateriaAEliminar(null)} 
+                className="px-6 py-3.5 rounded-2xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors w-full md:w-auto"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={confirmarEliminacion} 
+                className="px-6 py-3.5 rounded-2xl font-bold text-white bg-red-600 hover:bg-red-700 shadow-lg shadow-red-600/30 transition-all w-full md:w-auto"
+              >
+                Sí, eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

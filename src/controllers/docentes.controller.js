@@ -42,19 +42,21 @@ const obtenerAsistenciaMes = async (docenteId) => {
     };
 };
 
-// Login de Docentes (ACTUALIZADO: Super Populate y envío de Oferta Académica)
 export const loginDocente = async (req, res) => {
     const { username, password } = req.body;
     try {
         const docenteFound = await Docente.findOne({ username });
         if (!docenteFound) return res.status(400).json(["Docente no encontrado"]);
 
+        if (docenteFound.activo === false) {
+            return res.status(403).json(["Acceso denegado: Este docente está dado de baja."]);
+        }
+
         const isMatch = await bcrypt.compare(password, docenteFound.password);
         if (!isMatch) return res.status(400).json(["Contraseña incorrecta"]);
 
         const token = await createAccessToken({ id: docenteFound._id, role: 'docente' });
 
-        // 👇 1. Agregamos el deep populate para traer grupo y periodo
         const ofertas = await OfertaAcademica.find({ docente: docenteFound._id })
             .populate('materia')
             .populate('grupo')
@@ -83,7 +85,7 @@ export const loginDocente = async (req, res) => {
             qrCode: docenteFound.qrCode,
             role: 'docente',
             materias: materiasUnicas,
-            ofertaAcademica: ofertas, // 👇 2. ¡CRUCIAL! Enviamos las ofertas al frontend
+            ofertaAcademica: ofertas, 
             horasAcumuladas: datosAsistencia.horasAcumuladas,
             historialAsistencias: datosAsistencia.historialDetallado 
         });
@@ -93,7 +95,6 @@ export const loginDocente = async (req, res) => {
     }
 };
 
-// Crear nuevo Docente
 export const crearDocente = async (req, res) => {
     try {
         const { 
@@ -166,14 +167,13 @@ export const verifyDocenteToken = async (req, res) => {
             qrCode: docenteFound.qrCode, 
             role: 'docente',
             materias: materiasUnicas,
-            ofertaAcademica: ofertas, // 👇 2. ¡CRUCIAL! Enviamos las ofertas al frontend
+            ofertaAcademica: ofertas,
             horasAcumuladas: datosAsistencia.horasAcumuladas,
             historialAsistencias: datosAsistencia.historialDetallado 
         });
     });
 };
 
-// Obtener Docentes
 export const obtenerDocentes = async (req, res) => {
     try {
         const carrerasDelDirectivo = req.user && req.user.carreras ? req.user.carreras : [];
@@ -215,7 +215,6 @@ export const obtenerDocentes = async (req, res) => {
     }
 };
 
-// Obtener un solo Docente por ID
 export const obtenerDocente = async (req, res) => {
     try {
         const docente = await Docente.findById(req.params.id);
@@ -224,7 +223,6 @@ export const obtenerDocente = async (req, res) => {
     } catch (error) { res.status(500).json({ message: error.message }); }
 };
 
-// Actualizar un Docente
 export const actualizarDocente = async (req, res) => {
     try {
         const data = { ...req.body };
@@ -240,15 +238,22 @@ export const actualizarDocente = async (req, res) => {
     } catch (error) { res.status(500).json({ message: error.message }); }
 };
 
-// Eliminar un Docente
 export const eliminarDocente = async (req, res) => {
     try {
-        await Docente.findByIdAndDelete(req.params.id);
-        res.json({ message: 'Eliminado con éxito' });
-    } catch (error) { res.status(500).json({ message: error.message }); }
+        const docenteDadoDeBaja = await Docente.findByIdAndUpdate(
+            req.params.id, 
+            { activo: false }, 
+            { new: true }
+        );
+
+        if (!docenteDadoDeBaja) return res.status(404).json({ message: 'Docente no encontrado' });
+
+        res.json({ message: 'Docente dado de baja con éxito' });
+    } catch (error) { 
+        res.status(500).json({ message: error.message }); 
+    }
 };
 
-// Logout Docente
 export const logoutDocente = (req, res) => {
     res.cookie('token', "", { expires: new Date(0) });
     return res.sendStatus(200);
