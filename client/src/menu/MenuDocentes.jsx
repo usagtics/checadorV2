@@ -43,11 +43,16 @@ export default function MenuDocentes() {
             icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
         },
         { 
+            path: '/admin/justificaciones', 
+            label: 'Justificaciones', 
+            icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M15 12h3.75M15 15h3.75M5.625 4.5h12.75a1.875 1.875 0 011.875 1.875v11.25a1.875 1.875 0 01-1.875 1.875H5.625a1.875 1.875 0 01-1.875-1.875V6.375A1.875 1.875 0 015.625 4.5z" /></svg>
+        },
+        { 
             path: '/admin/nomina', 
             label: 'Nómina', 
             icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
         },
-         { 
+        { 
             path: '/admin/periodos', 
             label: 'Periodos', 
             icon: <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -62,7 +67,7 @@ export default function MenuDocentes() {
         });
     }
 
-        if (user?.role === 'super-admin') {
+    if (user?.role === 'super-admin') {
         menuItems.push({
             path: '/admin/carreras', 
             label: 'Ofertas Educativas', 
@@ -72,8 +77,6 @@ export default function MenuDocentes() {
 
     return (
         <aside className="hidden md:flex flex-col w-72 bg-white border-r border-gray-100 h-[calc(100vh-80px)] shadow-xl shadow-gray-200/20 sticky top-0">
-         
-
             <nav className="flex-1 p-6 space-y-2 overflow-y-auto">
                 <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest ml-2 mb-4">Menú Principal</p>
                 

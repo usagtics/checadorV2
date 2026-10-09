@@ -20,7 +20,6 @@ function EmployeePage() {
 
   const safeEmployees = employees || [];
 
-  // --- LÓGICA DE ESTADÍSTICAS ---
   const statsPorPlantel = safeEmployees.reduce((acc, emp) => {
     const nombrePlantel = emp.plantel?.nombre || "Sin Asignar";
     acc[nombrePlantel] = (acc[nombrePlantel] || 0) + 1;
@@ -28,7 +27,6 @@ function EmployeePage() {
   }, {});
 
   const statsArray = Object.entries(statsPorPlantel);
-  // -----------------------------
 
   const plantelesUnicos = [
     ...new Set(safeEmployees.map((emp) => emp.plantel?.nombre).filter(Boolean)),
@@ -43,10 +41,8 @@ function EmployeePage() {
     <div className="flex h-screen bg-gray-50">
       <MenuAdmin />
       
-      {/* Contenedor Principal */}
       <div className="flex-1 flex flex-col ml-0 md:ml-64 transition-all duration-300">
         
-        {/* Header Superior */}
         <div className="pt-24 px-8 pb-4">
             <h1 className="text-3xl font-bold text-gray-800">Gestión de Colaboradores</h1>
             <p className="text-gray-500 mt-1">Administra la nómina y asistencia de la universidad.</p>
@@ -54,12 +50,10 @@ function EmployeePage() {
 
         <div className="flex-1 px-8 pb-8 overflow-y-auto">
           
-          {/* --- SECCIÓN DE ESTADÍSTICAS (INTERACTIVA) --- */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             
-            {/* Tarjeta de Total General (Click para ver todos) */}
             <div 
-              onClick={() => setSelectedPlantel("")} // <--- LIMPIA EL FILTRO
+              onClick={() => setSelectedPlantel("")} 
               className={`bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between hover:shadow-md transition-all duration-300 cursor-pointer ${selectedPlantel === "" ? "ring-2 ring-blue-500 bg-blue-50" : ""}`}
             >
               <div>
@@ -72,11 +66,10 @@ function EmployeePage() {
               </div>
             </div>
 
-            {/* Tarjetas Dinámicas por Plantel (Click para filtrar) */}
             {statsArray.map(([nombre, cantidad], index) => (
               <div 
                 key={index} 
-                onClick={() => setSelectedPlantel(nombre)} // <--- FILTRA POR ESTE PLANTEL
+                onClick={() => setSelectedPlantel(nombre)} 
                 className={`bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between hover:shadow-md transition-all duration-300 cursor-pointer ${selectedPlantel === nombre ? "ring-2 ring-emerald-500 bg-emerald-50" : ""}`}
               >
                 <div className="overflow-hidden">
@@ -93,13 +86,10 @@ function EmployeePage() {
             ))}
           </div>
 
-          {/* --- BARRA DE HERRAMIENTAS --- */}
           <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 flex flex-col md:flex-row items-center justify-between gap-4">
             
-            {/* Izquierda: Buscador y Filtros */}
             <div className="flex flex-col md:flex-row gap-4 w-full md:w-auto">
-              
-              {/* Buscador */}
+ 
               <div className="relative w-full md:w-72">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
                   <SearchIcon fontSize="small" />
@@ -113,7 +103,6 @@ function EmployeePage() {
                 />
               </div>
 
-              {/* Filtro de Plantel (Se sincroniza automáticamente con las cards) */}
               <div className="relative w-full md:w-64">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
                   <FilterAltIcon fontSize="small" />
@@ -133,7 +122,6 @@ function EmployeePage() {
               </div>
             </div>
 
-            {/* Derecha: Botón de Acción */}
             <div className="w-full md:w-auto">
               <Link
                 to="/add-employee"
@@ -145,7 +133,6 @@ function EmployeePage() {
             </div>
           </div>
 
-          {/* --- TABLA DE DATOS --- */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
              <EmployeeCard employees={employeesFilteredByPlantel} searchTerm={searchTerm} />
           </div>

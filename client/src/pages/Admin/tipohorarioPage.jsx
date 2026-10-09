@@ -114,7 +114,6 @@ const DepartamentosPage = () => {
     setShowForm(!showForm); 
   };
 
-  // Pagination Logic
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentDepartamentos = departamentos ? departamentos.slice(indexOfFirstItem, indexOfLastItem) : [];
@@ -132,7 +131,6 @@ const DepartamentosPage = () => {
       
       <div className="flex-1 p-4 md:p-8 pt-20 md:ml-64 overflow-y-auto h-screen w-full">
         
-        {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
             <div>
                 <h2 className="text-2xl md:text-3xl font-bold text-gray-800 flex items-center gap-2 md:gap-3">
@@ -152,7 +150,6 @@ const DepartamentosPage = () => {
             </button>
         </div>
 
-        {/* Form */}
         {showForm && (
           <div className="mb-8 bg-white p-4 md:p-6 rounded-xl shadow-lg border-l-4 border-blue-500 animate-fade-in-down transition-all duration-300">
              <h3 className="text-lg font-semibold text-gray-700 mb-4">
@@ -161,7 +158,6 @@ const DepartamentosPage = () => {
              
              <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                 
-                {/* Nombre */}
                 <div className="md:col-span-3">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Nombre del Área / Departamento</label>
                     <div className="relative">
@@ -180,7 +176,6 @@ const DepartamentosPage = () => {
                     </div>
                 </div>
 
-                {/* Hora Entrada */}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Hora Entrada</label>
                     <div className="relative">
@@ -197,7 +192,6 @@ const DepartamentosPage = () => {
                     </div>
                 </div>
 
-                {/* Hora Salida */}
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Hora Salida</label>
                     <div className="relative">
@@ -214,7 +208,6 @@ const DepartamentosPage = () => {
                     </div>
                 </div>
 
-                {/* Buttons */}
                 <div className="md:col-span-3 flex justify-end gap-3 mt-4">
                     <button
                         type="button"
@@ -236,7 +229,6 @@ const DepartamentosPage = () => {
           </div>
         )}
 
-        {/* Table */}
         <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200 flex flex-col">
             <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -252,7 +244,6 @@ const DepartamentosPage = () => {
                             currentDepartamentos.map((depto) => (
                                 <tr key={depto._id} className="hover:bg-blue-50 transition-colors duration-150">
                                     
-                                    {/* Nombre */}
                                     <td className="px-4 md:px-6 py-4 whitespace-nowrap">
                                         <div className="flex items-center">
                                             <div className="flex-shrink-0 h-8 w-8 md:h-10 md:w-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center">
@@ -264,7 +255,7 @@ const DepartamentosPage = () => {
                                         </div>
                                     </td>
 
-                                    {/* Horario */}
+                           
                                     <td className="px-4 md:px-6 py-4 whitespace-nowrap">
                                         <div className="flex items-center text-sm text-gray-600">
                                             <FaClock className="mr-2 text-gray-400" />
@@ -272,7 +263,6 @@ const DepartamentosPage = () => {
                                         </div>
                                     </td>
 
-                                    {/* Acciones */}
                                     <td className="px-4 md:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                         <button 
                                             onClick={() => handleEdit(depto)} 
@@ -302,11 +292,9 @@ const DepartamentosPage = () => {
                 </table>
             </div>
             
-            {/* Pagination Controls Estilo Corporativo */}
             {departamentos && departamentos.length > 0 && (
               <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6">
                   
-                  {/* Vista Mobile (Simple) */}
                   <div className="flex flex-1 justify-between sm:hidden">
                     <button
                       onClick={() => paginate(currentPage - 1)}
@@ -324,7 +312,6 @@ const DepartamentosPage = () => {
                     </button>
                   </div>
 
-                  {/* Vista Desktop (Completa) */}
                   <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
                     <div>
                       <p className="text-sm text-gray-700">
@@ -342,7 +329,6 @@ const DepartamentosPage = () => {
                           <FaChevronLeft className="h-5 w-5" aria-hidden="true" />
                         </button>
                         
-                        {/* Botones de números de página (Opcional, aquí muestro solo Prev/Next con estilo unido) */}
                         <div className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 focus:outline-offset-0">
                             Página {currentPage} de {totalPages}
                         </div>

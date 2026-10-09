@@ -1,11 +1,13 @@
+import path from 'path';
+import fs from 'fs';
 import Justificacion from '../models/justificacion.model.js';
+import Docente from '../models/docentes.model.js'; 
 
 export const crearJustificacion = async (req, res) => {
     try {
         const { fechaAusencia, motivo, descripcion } = req.body;
         const docenteId = req.user.id; 
 
-        
         const evidencia = req.file ? req.file.filename : null;
 
         const nuevaJustificacion = new Justificacion({
@@ -35,18 +37,32 @@ export const obtenerMisJustificaciones = async (req, res) => {
     }
 };
 
-
 export const obtenerTodasJustificaciones = async (req, res) => {
     try {
-        const filtro = req.query.estado ? { estado: req.query.estado } : {};
+        const { estado } = req.query;
+        let filtro = estado ? { estado } : {};
+
+        const userRole = req.user.role;
+        const userCarreras = req.user.carreras || []; 
+
+        if (userRole !== 'super-admin' && userCarreras.length > 0) {
+            const docentesDelArea = await Docente.find({ 
+                carreras: { $in: userCarreras } 
+            }).select('_id');
+
+            const docenteIds = docentesDelArea.map(d => d._id);
+
+            filtro.docente = { $in: docenteIds };
+        }
 
         const justificaciones = await Justificacion.find(filtro)
-            .populate('docente', 'nombre apellidos numeroEmpleado') 
+            .populate('docente', 'nombre apellidos numeroEmpleado carreras') 
             .populate('revisadoPor', 'username') 
             .sort({ createdAt: -1 });
 
         res.json(justificaciones);
     } catch (error) {
+        console.error("Error al obtener justificaciones:", error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -70,10 +86,25 @@ export const actualizarEstadoJustificacion = async (req, res) => {
             return res.status(404).json({ message: 'Justificación no encontrada' });
         }
 
-
-
         res.json(justificacionActualizada);
     } catch (error) {
         res.status(500).json({ message: error.message });
+    }
+};
+
+export const obtenerEvidencia = async (req, res) => {
+    try {
+        const { filename } = req.params;
+        
+        const filepath = path.resolve('uploads/justificaciones', filename);
+
+        if (!fs.existsSync(filepath)) {
+            return res.status(404).json({ message: "El archivo no existe o fue eliminado." });
+        }
+
+        res.sendFile(filepath);
+    } catch (error) {
+        console.error("Error al obtener evidencia:", error);
+        res.status(500).json({ message: "Error interno al obtener el archivo." });
     }
 };

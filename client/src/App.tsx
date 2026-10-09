@@ -13,6 +13,7 @@ import { AcademicoProvider } from './context/AcademicoContext';
 import { GrupoProvider } from './context/GrupoContext'; 
 import { DirectivoProvider, useDirectivo } from './context/DirectivoContext';
 import { CarreraProvider } from './context/CarreraContext'; 
+import { JustificacionProvider } from './context/JustificacionContext'; 
 import Navbar from './components/Navbar';
 import NavbarAdmin from './components/NavbarAdmin';
 import NavbarDocente from './components/NavbarDocente';
@@ -47,6 +48,8 @@ import ReporteAsistenciaDocentesPage from './pages/AdminDocentes/ReporteAsistenc
 import NominaPage from './pages/AdminDocentes/NominaPage';
 import PeriodosPage from './pages/Docentes/PeriodosPage';
 import CarrerasPage from './pages/AdminDocentes/CarrerasPage'; 
+import AdminJustificacionesPage from './pages/AdminDocentes/AdminJustificacionesPage';
+import JustificacionesPage from './pages/Docentes/JustificacionesPage'; 
 
 function App() {
   return (
@@ -54,70 +57,74 @@ function App() {
       <PeriodoProvider> 
         <DirectivoProvider>
           <CarreraProvider> 
-            <TaskProvider>
-              <EmployeeProvider>
-                <TipoHorarioProvider>
-                  <PlantelesProvider>
-                    <ChecadasProvider> 
-                      <ChecadasDocenteProvider>
-                        <ReporteChecadasProvider>  
-                          <DocenteProvider>
-                            <GrupoProvider>
-                              <AcademicoProvider>
-                                <BrowserRouter>
-                                  <AuthContent />
-                                  <Routes>
-                                    <Route path="/" element={<HomePage />} />
-                                    <Route path="/login" element={<LoginPage />} />
-                                    <Route path="/directivo/login" element={<DirectivoLoginPage />} />
-                                    <Route path="/checador" element={<ChecadorPage />} />
+            <JustificacionProvider> 
+              <TaskProvider>
+                <EmployeeProvider>
+                  <TipoHorarioProvider>
+                    <PlantelesProvider>
+                      <ChecadasProvider> 
+                        <ChecadasDocenteProvider>
+                          <ReporteChecadasProvider>  
+                            <DocenteProvider>
+                              <GrupoProvider>
+                                <AcademicoProvider>
+                                  <BrowserRouter>
+                                    <AuthContent />
+                                    <Routes>
+                                      <Route path="/" element={<HomePage />} />
+                                      <Route path="/login" element={<LoginPage />} />
+                                      <Route path="/directivo/login" element={<DirectivoLoginPage />} />
+                                      <Route path="/checador" element={<ChecadorPage />} />
 
-                                    <Route element={<ProtectedRoute />}>
-                                      <Route path="/docente/inicio" element={<DocenteDashboardPage />} />
-                                      <Route path="/dashboard" element={<DashboardPage />} />
-                                      <Route path="/tasks" element={<TaskPage />} />
-                                      <Route path="/add-task" element={<TasksFormPage />} />
-                                      <Route path="/tasks/:id" element={<TasksFormPage />} />
-                                      <Route path="/profile" element={<ProfilePage />} />
-                                      <Route path="/register" element={<RegisterPage />} />
-                                      <Route path="/checadas" element={<ChecadaPage />} />
-                                      <Route path="/employees" element={<EmployeePage />} />
-                                      <Route path="/add-employee" element={<EmployeesFormPage />} />
-                                      <Route path="/employees/:id" element={<EmployeesFormPage />} />
-                                      <Route path="/tipo-horarios" element={<TipoHorarioPage />} />
-                                      <Route path="/planteles" element={<PlantelesPage />} />
-                                      <Route path="/reporte-checadas" element={<ReporteChecadasPage />} />
-                                      <Route path="/admin/directivos" element={<DirectivosPage />} />
-                                      <Route path="/admin/directivos/nuevo" element={<DirectivoFormPage />} />
-                                      <Route path="/admin/carreras" element={<CarrerasPage />} /> 
-                                      <Route path="/admin" element={<DashboardDirectivoPage />} />
-                                      <Route path="/admin/registro-docente" element={<DocenteFormPage />} />
-                                      <Route path="/admin/registro-docente/:id" element={<DocenteFormPage />} />
-                                      <Route path="/admin/docentes" element={<DocentesListPage />} />
-                                      <Route path="/admin/asignacion" element={<AsignacionAcademicaPage />} />
-                                      <Route path="/admin/materias" element={<MateriasListPage />} />
-                                      <Route path="/admin/materias/editar/:id" element={<MateriaFormPage />} />
-                                      <Route path="/admin/materias/nueva" element={<MateriaFormPage />} />
-                                      <Route path="/admin/grupos" element={<GruposListPage />} />
-                                      <Route path="/admin/grupos/nuevo" element={<GrupoFormPage />} />
-                                      <Route path="/admin/asistencia-docentes" element={<ReporteAsistenciaDocentesPage />} />
-                                      <Route path="/admin/periodos" element={<PeriodosPage />} />
-                                      <Route path="/admin/nomina" element={<NominaPage />} />
-                                    </Route>
+                                      <Route element={<ProtectedRoute />}>
+                                        <Route path="/docente/inicio" element={<DocenteDashboardPage />} />
+                                        <Route path="/docente/justificaciones" element={<JustificacionesPage />} />
+                                        <Route path="/dashboard" element={<DashboardPage />} />
+                                        <Route path="/tasks" element={<TaskPage />} />
+                                        <Route path="/add-task" element={<TasksFormPage />} />
+                                        <Route path="/tasks/:id" element={<TasksFormPage />} />
+                                        <Route path="/profile" element={<ProfilePage />} />
+                                        <Route path="/register" element={<RegisterPage />} />
+                                        <Route path="/checadas" element={<ChecadaPage />} />
+                                        <Route path="/employees" element={<EmployeePage />} />
+                                        <Route path="/add-employee" element={<EmployeesFormPage />} />
+                                        <Route path="/employees/:id" element={<EmployeesFormPage />} />
+                                        <Route path="/tipo-horarios" element={<TipoHorarioPage />} />
+                                        <Route path="/planteles" element={<PlantelesPage />} />
+                                        <Route path="/reporte-checadas" element={<ReporteChecadasPage />} />
+                                        <Route path="/admin/directivos" element={<DirectivosPage />} />
+                                        <Route path="/admin/directivos/nuevo" element={<DirectivoFormPage />} />
+                                        <Route path="/admin/carreras" element={<CarrerasPage />} /> 
+                                        <Route path="/admin" element={<DashboardDirectivoPage />} />
+                                        <Route path="/admin/justificaciones" element={<AdminJustificacionesPage />} />
+                                        <Route path="/admin/registro-docente" element={<DocenteFormPage />} />
+                                        <Route path="/admin/registro-docente/:id" element={<DocenteFormPage />} />
+                                        <Route path="/admin/docentes" element={<DocentesListPage />} />
+                                        <Route path="/admin/asignacion" element={<AsignacionAcademicaPage />} />
+                                        <Route path="/admin/materias" element={<MateriasListPage />} />
+                                        <Route path="/admin/materias/editar/:id" element={<MateriaFormPage />} />
+                                        <Route path="/admin/materias/nueva" element={<MateriaFormPage />} />
+                                        <Route path="/admin/grupos" element={<GruposListPage />} />
+                                        <Route path="/admin/grupos/nuevo" element={<GrupoFormPage />} />
+                                        <Route path="/admin/asistencia-docentes" element={<ReporteAsistenciaDocentesPage />} />
+                                        <Route path="/admin/periodos" element={<PeriodosPage />} />
+                                        <Route path="/admin/nomina" element={<NominaPage />} />
+                                      </Route>
 
-                                    <Route path="*" element={<Navigate to="/" replace />} />
-                                  </Routes>
-                                </BrowserRouter>
-                              </AcademicoProvider>
-                            </GrupoProvider>
-                          </DocenteProvider>
-                        </ReporteChecadasProvider>
-                      </ChecadasDocenteProvider>
-                    </ChecadasProvider>
-                  </PlantelesProvider>
-                </TipoHorarioProvider>
-              </EmployeeProvider>
-            </TaskProvider>
+                                      <Route path="*" element={<Navigate to="/" replace />} />
+                                    </Routes>
+                                  </BrowserRouter>
+                                </AcademicoProvider>
+                              </GrupoProvider>
+                            </DocenteProvider>
+                          </ReporteChecadasProvider>
+                        </ChecadasDocenteProvider>
+                      </ChecadasProvider>
+                    </PlantelesProvider>
+                  </TipoHorarioProvider>
+                </EmployeeProvider>
+              </TaskProvider>
+            </JustificacionProvider>
           </CarreraProvider> 
         </DirectivoProvider>
       </PeriodoProvider>

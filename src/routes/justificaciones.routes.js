@@ -6,12 +6,12 @@ import {
     crearJustificacion, 
     obtenerMisJustificaciones, 
     obtenerTodasJustificaciones, 
-    actualizarEstadoJustificacion 
+    actualizarEstadoJustificacion,
+    obtenerEvidencia 
 } from '../controllers/justificaciones.controller.js';
 import { authRequired } from '../middlewares/validateToken.js'; 
 
 const router = Router();
-
 
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
@@ -32,14 +32,14 @@ const upload = multer({
     limits: { fileSize: 5 * 1024 * 1024 } 
 });
 
-
 router.post('/', authRequired, upload.single('evidencia'), crearJustificacion);
 
 router.get('/mis-solicitudes', authRequired, obtenerMisJustificaciones);
 
-
 router.get('/', authRequired, obtenerTodasJustificaciones);
 
 router.put('/:id/estado', authRequired, actualizarEstadoJustificacion);
+
+router.get('/evidencia/:filename', authRequired, obtenerEvidencia);
 
 export default router;

@@ -52,7 +52,6 @@ const ChecadaPage: React.FC = () => {
   const [horaActual, setHoraActual] = useState(new Date());
   const [tipoHorario, setTipoHorario] = useState<any>(null);
   
-  // Cámara
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -62,7 +61,6 @@ const ChecadaPage: React.FC = () => {
 
     const initCamera = async () => {
       try {
-        // Solicitamos la cámara
         mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
         
         if (videoRef.current) {
@@ -178,7 +176,6 @@ useEffect(() => {
   }, [checadas, fechaSeleccionada]);
 
 
-  // --- LÓGICA DE REGISTRO CON TOLERANCIA ---
   const handleRegistrarChecada = async () => {
     const yaRegistroEntrada = checadasFiltradas.some((checada) => checada.tipo === "entrada");
     const yaRegistroSalida = checadasFiltradas.some((checada) => checada.tipo === "salida");
@@ -194,7 +191,6 @@ useEffect(() => {
     if (!selectedPlantel) return Swal.fire({ icon: "warning", title: "Selecciona Plantel", text: "Debes seleccionar un plantel." });
     if (!tipoHorario) return Swal.fire({ icon: "error", title: "Error", text: "No tienes horario asignado." });
 
-    // --- CÁLCULO VISUAL DE ESTATUS (Para mostrar al usuario) ---
     const now = new Date();
     const horaTexto = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     let mensajeFinal = "";
@@ -217,9 +213,8 @@ useEffect(() => {
           iconoAlerta = "warning";
       } else if (diffMinutos > 20) {
           mensajeFinal = `❌ Entrada registrada como FALTA (${horaTexto}).`;
-          iconoAlerta = "error"; // Rojo para indicar que cuenta como falta
+          iconoAlerta = "error";
       } else {
-          // Si llegó antes
           mensajeFinal = `✅ Entrada A TIEMPO (${horaTexto}).`;
           iconoAlerta = "success";
       }
@@ -283,7 +278,6 @@ useEffect(() => {
     }
   };
 
-  // Cambio automático
   useEffect(() => {
     const yaRegistroEntrada = checadasFiltradas.some((checada) => checada.tipo === "entrada");
     const yaRegistroSalida = checadasFiltradas.some((checada) => checada.tipo === "salida");
@@ -306,7 +300,6 @@ useEffect(() => {
             Checador de Personal
           </h1>
 
-          {/* RELOJ */}
           <div className="flex flex-col items-center justify-center mb-6 space-y-2">
             <FaRegClock className="w-16 h-16 animate-spin-slow text-blue-400 opacity-30" />
             <div className="flex flex-col items-center justify-center mb-6 space-y-1">
@@ -321,7 +314,6 @@ useEffect(() => {
             </div>
           </div>
 
-          {/* INFO HORARIO */}
           {tipoHorario ? (
             <div className="text-center text-lg text-gray-600 mb-6">
               <p>Horario: <strong>{tipoHorario.nombre}</strong></p>
@@ -366,7 +358,6 @@ useEffect(() => {
                 </div>
               </div>
 
-              {/* CÁMARA */}
               <div className="mt-4 flex flex-col items-center justify-center gap-4">
                 <div className="w-full max-w-md relative">
                    <video ref={videoRef} autoPlay muted playsInline className="rounded-lg w-full aspect-video object-cover bg-black" />
@@ -393,7 +384,6 @@ useEffect(() => {
             </div>
           </div>
 
-          {/* HISTORIAL DIARIO */}
           <div className="mt-10 max-w-3xl mx-auto">
             <div className="bg-white shadow-md rounded-xl p-6 border border-blue-100">
               <div className="mb-4">
@@ -418,7 +408,6 @@ useEffect(() => {
                         <div>
                           <p className="font-semibold text-blue-800 capitalize">{checada.tipo}</p>
                           <p className="text-xs text-blue-600">{checada.plantel?.nombre || "Sin plantel"}</p>
-                          {/* MOSTRAR ESTATUS EN LISTA */}
                           {checada.status && (
                              <span className={`text-xs font-bold px-2 py-0.5 rounded ${
                                  checada.status === 'Asistencia' ? 'bg-green-100 text-green-700' :

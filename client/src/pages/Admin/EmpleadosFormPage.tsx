@@ -3,8 +3,9 @@ import { useForm } from "react-hook-form";
 import { useEmployees } from "../../context/EmpleadoContext";
 import { useNavigate, useParams } from "react-router-dom";
 import MenuAdmin from "../../menu/menuAdmin";
-import axios from "../../api/axios";
+import axios from "../../api/axios.js"; 
 
+// Interfaces
 interface TipoHorario {
   _id: string;
   nombre: string;
@@ -47,7 +48,6 @@ function EmployeesFormPage() {
           axios.get("/planteles"),
         ]);
 
-        // 👇 2. CAMBIO AQUÍ: Obligamos a que sean arreglos para que React no colapse
         setTiposHorario(Array.isArray(resHorarios.data) ? resHorarios.data : []);
         setPlanteles(Array.isArray(resPlanteles.data) ? resPlanteles.data : []);
       } catch (error) {
@@ -74,7 +74,6 @@ function EmployeesFormPage() {
     fetchData();
     fetchEmployee();
     
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id]); 
 
   useEffect(() => {
@@ -169,7 +168,6 @@ function EmployeesFormPage() {
               className="px-2 py-1 border border-gray-300 rounded-md bg-white text-gray-800 w-full my-2"
             >
               <option value="">Seleccionar plantel</option>
-              {/* 👇 3. CAMBIO AQUÍ: Agregamos el signo de interrogación al mapeo */}
               {planteles?.map((p) => (
                 <option key={p._id} value={p._id}>
                   {p.nombre}
@@ -185,7 +183,6 @@ function EmployeesFormPage() {
               className="px-2 py-1 border border-gray-300 rounded-md bg-white text-gray-800 w-full my-2"
             >
               <option value="">Seleccionar horario</option>
-              {/* 👇 4. CAMBIO AQUÍ: Agregamos el signo de interrogación al mapeo */}
               {tiposHorario?.map((tipo) => (
                 <option key={tipo._id} value={tipo._id}>
                   {tipo.nombre}

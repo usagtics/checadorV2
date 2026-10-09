@@ -1,16 +1,12 @@
 import React, { useState, createContext, useContext } from "react";
 import { LogOut, User, Mail, Lock, CheckCircle, AlertCircle } from "lucide-react";
 
-// --- INICIO: MOCK DEL CONTEXTO (SOLO PARA ESTA VISTA PREVIA) ---
-// En tu código real, borra esta sección y usa: import { useAuth } from "../context/AuthContext";
 
 const AuthContext = createContext();
 
 const useAuth = () => {
-  // Simulación de los datos que vendrían de tu AuthContext real
   const context = useContext(AuthContext);
   if (!context) {
-    // Fallback por si se usa fuera del provider en la preview
     return {
         user: { id: "1", name: "Administrador Demo", email: "admin@checador.com" },
         updatePassword: async () => new Promise(resolve => setTimeout(resolve, 1000)),
@@ -20,12 +16,11 @@ const useAuth = () => {
   return context;
 };
 
-// Componente Wrapper para que funcione la demo
 const App = () => {
   const mockUser = { id: "1", name: "Paulina Galván", email: "cp.isabelusag@gmail.com" };
   const mockUpdatePassword = async (id, pass) => {
     console.log(`Actualizando password de ${id} a ${pass}`);
-    return new Promise((resolve) => setTimeout(resolve, 800)); // Simula delay de red
+    return new Promise((resolve) => setTimeout(resolve, 800));
   };
   const mockLogout = () => window.location.reload();
 
@@ -35,11 +30,9 @@ const App = () => {
     </AuthContext.Provider>
   );
 };
-// --- FIN DEL MOCK ---
 
 
 const ProfilePage = () => {
-  // Usa el hook (en tu proyecto real, esto importará desde tu archivo de contexto)
   const { user, updatePassword, logout } = useAuth();
   
   const [newPassword, setNewPassword] = useState("");
@@ -80,7 +73,6 @@ const ProfilePage = () => {
       
       <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden transition-all duration-300">
         
-        {/* Encabezado */}
         <div className="bg-blue-900 px-6 py-8 sm:px-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-center sm:text-left">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
@@ -90,7 +82,6 @@ const ProfilePage = () => {
               <User size={16} /> Administra tu información personal
             </p>
           </div>
-          {/* Avatar simple con inicial */}
           <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-bold text-2xl border-4 border-blue-800/50 shadow-inner">
              {user?.name ? user.name.charAt(0).toUpperCase() : "U"}
           </div>
@@ -98,7 +89,6 @@ const ProfilePage = () => {
 
         <div className="p-6 sm:p-8 space-y-8">
           
-          {/* Sección de Datos Personales */}
           <section className="bg-gray-50 rounded-xl p-6 border border-gray-100 shadow-sm">
             <h2 className="text-lg font-bold text-gray-800 mb-4 border-b border-gray-200 pb-2 flex items-center gap-2">
               <User className="text-blue-600" size={20} />
@@ -119,7 +109,6 @@ const ProfilePage = () => {
             </div>
           </section>
 
-          {/* Sección de Cambio de Contraseña */}
           <section>
             <h2 className="text-xl font-bold text-blue-900 mb-5 flex items-center gap-2">
               <Lock className="text-blue-600" size={24} />
@@ -191,7 +180,6 @@ const ProfilePage = () => {
             </form>
           </section>
 
-          {/* Zona de Cerrar Sesión */}
           <section className="pt-8 border-t border-gray-200 mt-8">
             <button
                 onClick={() => logout()}
@@ -208,4 +196,4 @@ const ProfilePage = () => {
   );
 };
 
-export default App; // Exportamos App para que funcione la preview con el Contexto
+export default App; 
